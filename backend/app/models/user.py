@@ -7,6 +7,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
 
+def utc_now():
+    return datetime.now(timezone.utc)
+
 class User(Base):
     __tablename__ = "users"
     
@@ -43,14 +46,14 @@ class User(Base):
     )
     
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.now(timezone.utc),
+        DateTime(timezone=True),
+        default=utc_now,
         nullable=False
     )
     
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default = datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc),
+        DateTime(timezone=True),
+        default = utc_now,
+        onupdate=utc_now,
         nullable=False
     )
