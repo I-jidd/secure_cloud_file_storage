@@ -33,7 +33,7 @@ class Folder(Base):
         index=True
     )
     
-    parent_folder: Mapped[uuid.UUID] = mapped_column(
+    parent_folder_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("folders.id", ondelete="CASCADE"),
         nullable=True,
