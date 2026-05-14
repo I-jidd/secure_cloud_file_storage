@@ -10,7 +10,8 @@ from app.services.folder_service import (
     list_folders,
     get_owned_folder,
     update_folder,
-    delete_folder)
+    delete_folder,
+    restore_folder)
 from app.schemas.folder import FolderCreate, FolderResponse, FolderUpdate
 
 
@@ -72,7 +73,7 @@ def rename_folder(
 
 @router.delete("/{folder_id}", response_model=FolderResponse)
 def remove_folder(
-    folder_id: UUID | None,
+    folder_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -80,4 +81,16 @@ def remove_folder(
         db=db,
         current_user=current_user,
         folder_id=folder_id
+    )
+
+@router.patch("/{folder_id}/restore", response_model=FolderResponse)
+def restore_deleted_folder(
+    folder_id: UUID,
+    db: Session = Depends(get_db),
+    current_user:User = Depends(get_current_user)
+):
+    return restore_folder(
+        db=db,
+        folder_id=folder_id,
+        current_user=current_user
     )

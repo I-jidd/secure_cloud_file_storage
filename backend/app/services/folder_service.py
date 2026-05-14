@@ -95,7 +95,7 @@ def list_folders(
         db.query(Folder)
         .filter(
             Folder.owner_id == current_user.id,
-            Folder.parent_folder ==parent_folder_id,
+            Folder.parent_folder_id == parent_folder_id,
             Folder.is_deleted == False
         )
         .order_by(Folder.created_at.desc())
@@ -127,10 +127,46 @@ def update_folder(
     
     return folder
 
+def soft_delete_folder_tree(
+    db:Session,
+    folder:Folder
+) -> None:
+    folder.is_deleted = True
+    folder.deleted_at = utc_now()
+    
+    child_folders = (
+        db.query(Folder)
+        .filter(
+            Folder.parent_folder_id == folder.id,
+            Folder.owner_id == folder.owner_id
+        )
+        .all()
+    )
+    for child_folder in child_folders:
+        soft_delete_folder_tree(db=db, folder=child_folder)
+
+def restore_folder_tree(
+    db:Session,
+    folder: Folder
+) -> None: 
+    folder.is_deleted = False
+    folder.deleted_at = None
+    
+    child_folders = (
+        db.query(Folder)
+        .filter(
+            Folder.parent_folder_id == folder.id,
+            Folder.owner_id == folder.owner_id
+        )
+        .all()
+    )
+    for child_folder in child_folders:
+        restore_folder_tree(db=db, folder=child_folder)
+    
 def delete_folder(
     db: Session,
     current_user: User,
-    folder_id: UUID | None,
+    folder_id: UUID,
 ) -> Folder:
     folder = get_owned_folder(
         db=db,
@@ -144,10 +180,46 @@ def delete_folder(
             detail="Folder is already deleted"
         )
     
-    folder.is_deleted = True
-    folder.deleted_at = utc_now()
-    
+    soft_delete_folder_tree(db=db, folder=folder)
+
     db.commit()
     db.refresh(folder)
     
+    return folder
+
+def restore_folder(
+    db: Session,
+    folder_id: UUID,
+    current_user: User
+) -> Folder:
+    folder = get_owned_folder(
+        db=db,
+        folder_id=folder_id,
+        current_user=current_user
+    )
+
+    if not folder.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Folder is not deleted"
+        )
+
+    if folder.parent_folder_id is not None:
+        parent_folder = get_owned_folder(
+            db=db,
+            folder_id=folder.parent_folder_id,
+            current_user=current_user
+        )
+
+        if parent_folder.is_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot restore this folder while its parent folder is still deleted"
+            )
+
+    restore_folder_tree(db=db, folder=folder)
+
+    db.commit()
+    db.refresh(folder)
+
     return folder
