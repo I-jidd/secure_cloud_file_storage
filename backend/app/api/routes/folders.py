@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
-from app.services.folder_service import create_folder, list_folders
+from app.services.folder_service import create_folder, list_folders, get_owned_folder
 from app.schemas.folder import FolderCreate, FolderResponse
 
 
@@ -37,4 +37,16 @@ def get_folders(
         db=db,
         current_user=current_user,
         parent_folder_id=parent_folder_id
+    )
+    
+@router.get("/{folder_id}", response_model=FolderResponse)
+def get_folder(
+    folder_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_owned_folder(
+        db=db, 
+        folder_id=folder_id,
+        current_user=current_user
     )
