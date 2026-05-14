@@ -79,3 +79,25 @@ def create_folder(
     db.refresh(new_folder)
     
     return new_folder
+
+def list_folders(
+    db: Session,
+    current_user: User,
+    parent_folder_id: UUID | None
+) -> list[Folder]:
+    if parent_folder_id is None:
+        validate_parent_folder(
+            db=db,
+            parent_folder_id=parent_folder_id,
+            current_user=current_user
+        )
+    return(
+        db.query(Folder)
+        .filter(
+            Folder.owner_id == current_user.id,
+            Folder.parent_folder ==parent_folder_id,
+            Folder.is_deleted == False
+        )
+        .order_by(Folder.created_at.desc())
+        .all()
+    )
