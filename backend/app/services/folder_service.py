@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.models.folder import Folder
+from app.models.folder import Folder, utc_now
 from app.schemas.folder import FolderCreate, FolderUpdate
 from app.models.user import User
 
@@ -121,6 +121,31 @@ def update_folder(
         )
         
     folder.name = folder_data.name
+    
+    db.commit()
+    db.refresh(folder)
+    
+    return folder
+
+def delete_folder(
+    db: Session,
+    current_user: User,
+    folder_id: UUID | None,
+) -> Folder:
+    folder = get_owned_folder(
+        db=db,
+        current_user=current_user,
+        folder_id=folder_id
+    )
+    
+    if folder.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Folder is already deleted"
+        )
+    
+    folder.is_deleted = True
+    folder.deleted_at = utc_now()
     
     db.commit()
     db.refresh(folder)

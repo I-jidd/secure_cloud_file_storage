@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
-from app.services.folder_service import create_folder, list_folders, get_owned_folder, update_folder
+from app.services.folder_service import (
+    create_folder,
+    list_folders,
+    get_owned_folder,
+    update_folder,
+    delete_folder)
 from app.schemas.folder import FolderCreate, FolderResponse, FolderUpdate
 
 
@@ -63,4 +68,16 @@ def rename_folder(
         current_user=current_user,
         folder_id=folder_id,
         folder_data=folder_data
+    )
+
+@router.delete("/{folder_id}", response_model=FolderResponse)
+def remove_folder(
+    folder_id: UUID | None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return delete_folder(
+        db=db,
+        current_user=current_user,
+        folder_id=folder_id
     )
