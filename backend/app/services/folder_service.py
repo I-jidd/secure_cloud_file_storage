@@ -102,6 +102,20 @@ def list_folders(
         .all()
     )
 
+def list_deleted_folders(
+    db: Session,
+    current_user: User
+) -> list[Folder]:
+    return(
+        db.query(Folder)
+        .filter(
+            Folder.owner_id == current_user.id,
+            Folder.is_deleted == True
+        )
+        .order_by(Folder.deleted_at.desc())
+        .all()
+    )
+
 def update_folder(
     db: Session,
     current_user: User,

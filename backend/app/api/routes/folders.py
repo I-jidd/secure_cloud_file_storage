@@ -11,7 +11,8 @@ from app.services.folder_service import (
     get_owned_folder,
     update_folder,
     delete_folder,
-    restore_folder)
+    restore_folder,
+    list_deleted_folders)
 from app.schemas.folder import FolderCreate, FolderResponse, FolderUpdate
 
 
@@ -44,6 +45,16 @@ def get_folders(
         current_user=current_user,
         parent_folder_id=parent_folder_id
     )
+
+@router.get("/trash", response_model=list[FolderResponse])
+def get_deleted_folders(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return list_deleted_folders(
+        db=db,
+        current_user=current_user
+    )
     
 @router.get("/{folder_id}", response_model=FolderResponse)
 def get_folder(
@@ -57,7 +68,7 @@ def get_folder(
         current_user=current_user
     )
     
-@router.patch("/{folder}", response_model=FolderResponse)
+@router.patch("/{folder_id}", response_model=FolderResponse)
 def rename_folder(
     folder_id: UUID,
     folder_data: FolderUpdate,
@@ -94,3 +105,4 @@ def restore_deleted_folder(
         folder_id=folder_id,
         current_user=current_user
     )
+
