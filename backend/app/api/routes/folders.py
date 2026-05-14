@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
-from app.services.folder_service import create_folder, list_folders, get_owned_folder
-from app.schemas.folder import FolderCreate, FolderResponse
+from app.services.folder_service import create_folder, list_folders, get_owned_folder, update_folder
+from app.schemas.folder import FolderCreate, FolderResponse, FolderUpdate
 
 
 router = APIRouter(prefix="/folders", tags=["Folders"])
@@ -49,4 +49,18 @@ def get_folder(
         db=db, 
         folder_id=folder_id,
         current_user=current_user
+    )
+    
+@router.patch("/{folder}", response_model=FolderResponse)
+def rename_folder(
+    folder_id: UUID,
+    folder_data: FolderUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return update_folder(
+        db=db,
+        current_user=current_user,
+        folder_id=folder_id,
+        folder_data=folder_data
     )

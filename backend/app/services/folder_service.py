@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.folder import Folder
-from app.schemas.folder import FolderCreate
+from app.schemas.folder import FolderCreate, FolderUpdate
 from app.models.user import User
 
 def get_folder_by_id(db:Session, folder_id:UUID) -> Folder | None:
@@ -101,3 +101,28 @@ def list_folders(
         .order_by(Folder.created_at.desc())
         .all()
     )
+
+def update_folder(
+    db: Session,
+    current_user: User,
+    folder_id: UUID | None,
+    folder_data: FolderUpdate
+) -> Folder:
+    folder = get_owned_folder(
+        db=db,
+        folder_id=folder_id,
+        current_user=current_user
+    )
+    
+    if folder.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot rename a deleted folder"
+        )
+        
+    folder.name = folder_data.name
+    
+    db.commit()
+    db.refresh(folder)
+    
+    return folder
