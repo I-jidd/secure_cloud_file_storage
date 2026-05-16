@@ -7,7 +7,8 @@ venv/
 .env
 
 # FastAPI / backend
-backend/storage/uploads/
+backend/storage/uploads/*
+!backend/storage/uploads/.gitkeep
 backend/.pytest_cache/
 
 # Node / React
