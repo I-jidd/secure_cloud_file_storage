@@ -69,7 +69,7 @@ def create_file_metadata(
     stored_name, storage_path = save_upload_file(upload_file)
     
     new_file = File(
-        riginal_name=upload_file.filename or stored_name,
+        original_name=upload_file.filename or stored_name,
         stored_name=stored_name,
         storage_path=storage_path,
         mime_type=upload_file.content_type,
