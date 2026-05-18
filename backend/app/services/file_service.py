@@ -52,32 +52,39 @@ def validate_target_folder(
     return folder
 
 def create_file_metadata(
-    db:Session,
+    db: Session,
     upload_file: UploadFile,
     current_user: User,
     folder_id: UUID | None = None
 ) -> File:
     validate_file_type(upload_file)
     file_size = validate_file_size(upload_file)
-    
+
     validate_target_folder(
         db=db,
-        current_user=current_user,
-        folder_id=folder_id
+        folder_id=folder_id,
+        current_user=current_user
     )
-    
+
     stored_name, storage_path = save_upload_file(upload_file)
-    
-    new_file = File(
-        original_name=upload_file.filename or stored_name,
-        stored_name=stored_name,
-        storage_path=storage_path,
-        mime_type=upload_file.content_type,
-        size_bytes=file_size,
-        owner_id=current_user.id,
-        folder_id=folder_id
-    )
-    
-    db.add(new_file)
-    db.commit()
-    db.refresh(new_file)
+
+    try:
+        new_file = File(
+            original_name=upload_file.filename or stored_name,
+            stored_name=stored_name,
+            storage_path=storage_path,
+            mime_type=upload_file.content_type,
+            size_bytes=file_size,
+            owner_id=current_user.id,
+            folder_id=folder_id
+        )
+
+        db.add(new_file)
+        db.commit()
+        db.refresh(new_file)
+
+        return new_file
+
+    except Exception:
+        db.rollback()
+        raise
