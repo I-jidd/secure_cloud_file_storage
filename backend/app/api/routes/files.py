@@ -7,7 +7,7 @@ from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
 from app.schemas.file import FileResponse
-from app.services.file_service import create_file_metadata
+from app.services.file_service import create_file_metadata, list_files
 
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -27,6 +27,18 @@ def upload_file(
     return create_file_metadata(
         db=db,
         upload_file=upload_file,
+        current_user=current_user,
+        folder_id=folder_id
+    )
+
+@router.get("", response_model=list[FileResponse])
+def get_files(
+    folder_id: UUID | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return list_files(
+        db=db, 
         current_user=current_user,
         folder_id=folder_id
     )

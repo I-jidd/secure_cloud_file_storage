@@ -88,3 +88,26 @@ def create_file_metadata(
     except Exception:
         db.rollback()
         raise
+    
+def list_files(
+    db: Session,
+    current_user: User,
+    folder_id: UUID | None = None
+) -> list[File]:
+    if folder_id is not None:
+        validate_target_folder(
+            db=db,
+            current_user=current_user,
+            folder_id=folder_id
+        )
+    
+    return (
+        db.query(File)
+        .filter(
+            File.owner_id == current_user.id,
+            File.folder_id == folder_id,
+            File.is_deleted == False
+        )
+        .order_by(File.created_at.desc())
+        .all()
+    )
