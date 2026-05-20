@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     
     STORAGE_BACKEND: str = "local"
-    LOCAL_STORAGE_PATH: str = "storage/uploads"
+    LOCAL_STORAGE_PATH: str = "app/storage/uploads"
     MAX_FILE_SIZE_MB: int = 10
     ALLOWED_FILE_TYPES: str = (
         "application/pdf,image/png,image/jpeg,text/plain,"

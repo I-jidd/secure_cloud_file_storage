@@ -1,13 +1,14 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi.responses import FileResponse as FastAPIFileResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
 from app.schemas.file import FileResponse
-from app.services.file_service import create_file_metadata, list_files
+from app.services.file_service import create_file_metadata, list_files, get_file_for_download
 
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -41,4 +42,22 @@ def get_files(
         db=db, 
         current_user=current_user,
         folder_id=folder_id
+    )
+    
+@router.get("/{folder_id}/download")
+def download_file(
+    file_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    file_record = get_file_for_download(
+        db=db,
+        current_user=current_user,
+        file_id=file_id
+    )
+    
+    return FastAPIFileResponse(
+        path = file_record.storage_path,
+        filename= file_record.original_name,
+        media_type=file_record.mime_type or "application/octet-stream"
     )

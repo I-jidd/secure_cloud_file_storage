@@ -1,4 +1,5 @@
 from uuid import UUID
+from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
@@ -111,3 +112,55 @@ def list_files(
         .order_by(File.created_at.desc())
         .all()
     )
+    
+def get_owned_file(
+    db: Session,
+    current_user: User,
+    file_id: UUID,
+) -> File:
+    file_record = (
+        db.query(File)
+        .filter(File.id == file_id)
+        .first()
+    )
+
+    if file_record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+    
+    if file_record.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail = "You do not have permission to access this file"
+        )
+    
+    return file_record
+
+def get_file_for_download(
+    db: Session,
+    current_user: User,
+    file_id: UUID
+) -> File:
+    file_record = get_owned_file(
+        db=db,
+        current_user=current_user,
+        file_id=file_id
+    )
+
+    if file_record.is_deleted:
+        raise HTTPException(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            detail="Cannot download a deleted file"
+        )
+    
+    storage_path = Path(file_record.storage_path)
+    
+    if not storage_path.exists() or not storage_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Stored file not found on disk"
+        )
+    
+    return file_record
