@@ -10,6 +10,7 @@ from app.models.user import User
 from app.core.config import settings
 from app.services.folder_service import get_owned_folder
 from app.storage.local_storage import save_upload_file
+from app.schemas.file import FileUpdate
 
 def validate_file_type(upload_file: UploadFile) -> None:
     if upload_file.content_type not in settings.allowed_file_types_list:
@@ -162,5 +163,30 @@ def get_file_for_download(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Stored file not found on disk"
         )
+    
+    return file_record
+
+def update_file(
+    db:Session,
+    current_user: User,
+    file_id: UUID,
+    file_data: FileUpdate
+) -> File:
+    file_record = get_owned_file(
+        db=db,
+        current_user=current_user,
+        file_id=file_id
+    )
+    
+    if file_record.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot rename a deleted file"
+        )
+    
+    file_record.original_name = file_data.original_name
+    
+    db.commit()
+    db.refresh(file_record)
     
     return file_record

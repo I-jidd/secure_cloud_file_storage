@@ -7,8 +7,12 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.file import FileResponse
-from app.services.file_service import create_file_metadata, list_files, get_file_for_download
+from app.schemas.file import FileResponse, FileUpdate
+from app.services.file_service import (
+     create_file_metadata,
+     list_files,
+     get_file_for_download,
+     update_file)
 
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -44,7 +48,7 @@ def get_files(
         folder_id=folder_id
     )
     
-@router.get("/{folder_id}/download")
+@router.get("/{file_id}/download")
 def download_file(
     file_id: UUID,
     db: Session = Depends(get_db),
@@ -60,4 +64,18 @@ def download_file(
         path = file_record.storage_path,
         filename= file_record.original_name,
         media_type=file_record.mime_type or "application/octet-stream"
+    )
+
+@router.patch("/{file_id}", response_model=FileResponse)
+def rename_file(
+    file_id: UUID,
+    file_data: FileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return update_file(
+        db=db,
+        file_id=file_id,
+        file_data=file_data,
+        current_user=current_user
     )
