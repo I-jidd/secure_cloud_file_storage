@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.models.file import File
+from app.models.file import File, utc_now
 from app.models.folder import Folder
 from app.models.user import User
 from app.core.config import settings
@@ -185,6 +185,31 @@ def update_file(
         )
     
     file_record.original_name = file_data.original_name
+    
+    db.commit()
+    db.refresh(file_record)
+    
+    return file_record
+
+def delete_file(
+    db:Session,
+    current_user: User,
+    file_id: UUID
+) -> File:
+    file_record = get_owned_file(
+        db=db,
+        current_user=current_user,
+        file_id=file_id
+    )
+    
+    if file_record.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File is already deleted"
+        )
+    
+    file_record.is_deleted = True
+    file_record.deleted_at = utc_now()
     
     db.commit()
     db.refresh(file_record)

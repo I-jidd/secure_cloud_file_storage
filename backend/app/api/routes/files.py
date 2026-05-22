@@ -12,7 +12,8 @@ from app.services.file_service import (
      create_file_metadata,
      list_files,
      get_file_for_download,
-     update_file)
+     update_file,
+     delete_file)
 
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -78,4 +79,16 @@ def rename_file(
         file_id=file_id,
         file_data=file_data,
         current_user=current_user
+    )
+
+@router.delete("/{file_id}", response_model=FileResponse)
+def remove_file(
+    db:Session = Depends(get_db),
+    current_user : User = Depends(get_current_user),
+    file_id = UUID
+):
+    return delete_file(
+        db=db,
+        current_user=current_user,
+        file_id=file_id
     )
