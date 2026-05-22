@@ -215,3 +215,43 @@ def delete_file(
     db.refresh(file_record)
     
     return file_record
+
+def restore_file(
+    db:Session,
+    current_user: User,
+    file_id: UUID
+) -> File:
+    
+    file_record = get_owned_file(
+        db=db,
+        current_user=current_user,
+        file_id=file_id
+    )
+    
+    if not file_record.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File is not deleted"
+        )
+    
+    if file_record.folder_id is not None:
+        folder = get_owned_folder(
+            db=db,
+            folder_id=folder,
+            current_user=current_user
+        )
+        
+        if folder.is_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot restore file while its folder is deleted"
+            )
+        
+    file_record.is_deleted = False
+    file_record.deleted_at = None
+    
+    db.commit()
+    db.refresh(file_record)
+    
+    return file_record
+    

@@ -13,7 +13,8 @@ from app.services.file_service import (
      list_files,
      get_file_for_download,
      update_file,
-     delete_file)
+     delete_file,
+     restore_file)
 
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -88,6 +89,18 @@ def remove_file(
     file_id = UUID
 ):
     return delete_file(
+        db=db,
+        current_user=current_user,
+        file_id=file_id
+    )
+
+@router.patch("/{folder_id}/restore", response_model=FileResponse)
+def restore_deleted_file(
+    db:Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    file_id = UUID
+):
+    return restore_file(
         db=db,
         current_user=current_user,
         file_id=file_id
