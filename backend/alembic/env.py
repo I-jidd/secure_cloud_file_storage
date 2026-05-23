@@ -9,6 +9,7 @@ from app.db.database import Base
 from app.models.user import User
 from app.models.folder import Folder
 from app.models.file import File
+from app.models.activity_log import ActivityLog
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
