@@ -1,4 +1,4 @@
-from app.api.routes import health, auth, folders, files, activity_logs
+from app.api.routes import health, auth, folders, files, activity_logs, dashboard
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -23,6 +23,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(folders.router, prefix="/api")
 app.include_router(files.router, prefix="/api")
 app.include_router(activity_logs.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
 
 @app.get("/")
 def root():
