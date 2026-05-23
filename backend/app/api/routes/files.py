@@ -14,7 +14,8 @@ from app.services.file_service import (
      get_file_for_download,
      update_file,
      delete_file,
-     restore_file)
+     restore_file,
+     list_deleted_files)
 
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -49,7 +50,17 @@ def get_files(
         current_user=current_user,
         folder_id=folder_id
     )
-    
+  
+@router.get("/trash",response_model=list[FileResponse])
+def get_deleted_files(
+    db:Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return list_deleted_files(
+        db=db,
+        current_user=current_user
+    )  
+
 @router.get("/{file_id}/download")
 def download_file(
     file_id: UUID,

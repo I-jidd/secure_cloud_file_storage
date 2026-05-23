@@ -114,6 +114,20 @@ def list_files(
         .all()
     )
     
+def list_deleted_files(
+    db:Session,
+    current_user: User
+) -> list[File]:
+    return (
+        db.query(File)
+        .filter(
+            File.owner_id == current_user.id,
+            File.is_deleted == True
+        )
+        .order_by(File.deleted_at.desc())
+        .all()
+    )
+
 def get_owned_file(
     db: Session,
     current_user: User,
