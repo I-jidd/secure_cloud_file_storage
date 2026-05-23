@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import FileResponse as FastAPIFileResponse
 from sqlalchemy.orm import Session
 
@@ -42,13 +42,19 @@ def upload_file(
 @router.get("", response_model=list[FileResponse])
 def get_files(
     folder_id: UUID | None = None,
+    search: str | None = Query(default=None, max_length=255),
+    mime_type: str | None = Query(default= None, max_length=100),
+    sort_by: str = Query(default="newest", pattern ="^(newest|oldest|name|size)$"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return list_files(
-        db=db, 
+        db=db,
         current_user=current_user,
-        folder_id=folder_id
+        folder_id=folder_id,
+        search=search,
+        mime_type=mime_type,
+        sort_by=sort_by
     )
   
 @router.get("/trash",response_model=list[FileResponse])

@@ -106,7 +106,10 @@ def create_file_metadata(
 def list_files(
     db: Session,
     current_user: User,
-    folder_id: UUID | None = None
+    folder_id: UUID | None = None,
+    search: str | None = None,
+    mime_type: str | None = None,
+    sort_by: str = "newest"
 ) -> list[File]:
     if folder_id is not None:
         validate_target_folder(
@@ -115,17 +118,29 @@ def list_files(
             folder_id=folder_id
         )
     
-    return (
-        db.query(File)
-        .filter(
-            File.owner_id == current_user.id,
-            File.folder_id == folder_id,
-            File.is_deleted == False
-        )
-        .order_by(File.created_at.desc())
-        .all()
+    query = db.query(File).filter(
+        File.owner_id == current_user.id,
+        File.folder_id == folder_id,
+        File.is_deleted == False
     )
     
+    if search:
+        query = query.filter(File.original_name.ilike(f"%{search}%"))
+            
+    if mime_type:
+        query = query.filter(File.mime_type == mime_type)
+    
+    if sort_by == "oldest":
+        query = query.order_by(File.created_at.asc())
+    elif sort_by == "name":
+        query = query.order_by(File.original_name.asc())
+    elif sort_by == "size":
+        query = query.order_by(File.size_bytes.desc())
+    else:
+        query = query.order_by(File.created_at.desc())
+        
+    return query.all()
+
 def list_deleted_files(
     db:Session,
     current_user: User
