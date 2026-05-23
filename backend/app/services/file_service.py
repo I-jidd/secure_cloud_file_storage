@@ -9,6 +9,7 @@ from app.models.folder import Folder
 from app.models.user import User
 from app.core.config import settings
 from app.services.folder_service import get_owned_folder
+from app.services.activity_log_service import create_activity_log
 from app.storage.local_storage import save_upload_file
 from app.schemas.file import FileUpdate
 
@@ -82,6 +83,17 @@ def create_file_metadata(
         )
 
         db.add(new_file)
+        db.flush()
+        
+        create_activity_log(
+            db=db,
+            current_user=current_user,
+            action="upload",
+            entity_id=new_file.id,
+            entity_type="file",
+            details=f"Uploaded file: {new_file.original_name}"
+        )
+        
         db.commit()
         db.refresh(new_file)
 
@@ -178,6 +190,16 @@ def get_file_for_download(
             detail="Stored file not found on disk"
         )
     
+    create_activity_log(
+        db=db,
+        current_user=current_user,
+        action = "download",
+        entity_type="file",
+        entity_id= file_record.id,
+        details=f"Downloaded file: {file_record.original_name}"
+    )
+    db.commit()
+    
     return file_record
 
 def update_file(
@@ -198,7 +220,17 @@ def update_file(
             detail="Cannot rename a deleted file"
         )
     
+    old_name = file_record.original_name
     file_record.original_name = file_data.original_name
+    
+    create_activity_log(
+        db=db,
+        current_user=current_user,
+        action="rename",
+        entity_type="file",
+        entity_id=file_record.id,
+        details=f"Renamed file from {old_name} to {file_record.original_name}"
+    )
     
     db.commit()
     db.refresh(file_record)
@@ -224,6 +256,15 @@ def delete_file(
     
     file_record.is_deleted = True
     file_record.deleted_at = utc_now()
+    
+    create_activity_log(
+        db=db,
+        current_user=current_user,
+        action="delete",
+        entity_type="file",
+        entity_id=file_record.id,
+        details=f"Deleted file: {file_record.original_name}"
+    )
     
     db.commit()
     db.refresh(file_record)
@@ -263,6 +304,15 @@ def restore_file(
         
     file_record.is_deleted = False
     file_record.deleted_at = None
+    
+    create_activity_log(
+        db=db,
+        current_user=current_user,
+        action="restore",
+        entity_type="file",
+        entity_id=file_record.id,
+        details=f"Restored file: {file_record.original_name}"
+    )
     
     db.commit()
     db.refresh(file_record)
