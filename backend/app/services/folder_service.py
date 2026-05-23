@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.folder import Folder, utc_now
 from app.schemas.folder import FolderCreate, FolderUpdate
+from app.services.activity_log_service import create_activity_log
 from app.models.user import User
 
 def get_folder_by_id(db:Session, folder_id:UUID) -> Folder | None:
@@ -75,6 +76,17 @@ def create_folder(
     )
     
     db.add(new_folder)
+    db.flush()
+    
+    create_activity_log(
+        db=db,
+        current_user=current_user,
+        action="create",
+        entity_type="folder",
+        entity_id=new_folder.id,
+        details=f"Created folder: {new_folder.name}"
+    )
+    
     db.commit()
     db.refresh(new_folder)
     
@@ -133,8 +145,18 @@ def update_folder(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot rename a deleted folder"
         )
-        
+    
+    old_name = folder.name
     folder.name = folder_data.name
+    
+    create_activity_log(
+        db=db,
+        current_user=current_user,
+        action="rename",
+        entity_type="folder",
+        entity_id=folder.id,
+        details=f"Renamed folder from {old_name} to {folder.name}"
+    )
     
     db.commit()
     db.refresh(folder)
@@ -196,6 +218,15 @@ def delete_folder(
     
     soft_delete_folder_tree(db=db, folder=folder)
 
+    create_activity_log(
+        db=db,
+        current_user=current_user,
+        action="delete",
+        entity_type="folder",
+        entity_id=folder.id,
+        details=f"Deleted folder: {folder.name}"
+    )
+    
     db.commit()
     db.refresh(folder)
     
@@ -232,6 +263,15 @@ def restore_folder(
             )
 
     restore_folder_tree(db=db, folder=folder)
+
+    create_activity_log(
+        db=db,
+        current_user=current_user,
+        action="restore",
+        entity_type="folder",
+        entity_id=folder.id,
+        details=f"Restore folder: {folder.name}"
+    )
 
     db.commit()
     db.refresh(folder)
