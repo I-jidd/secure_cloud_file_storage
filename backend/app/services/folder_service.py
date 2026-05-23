@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session
 
 from app.models.folder import Folder, utc_now
@@ -95,24 +96,35 @@ def create_folder(
 def list_folders(
     db: Session,
     current_user: User,
-    parent_folder_id: UUID | None
+    parent_folder_id: UUID | None = None,
+    search: str | None = None,
+    sort_by: str = "newest"
 ) -> list[Folder]:
-    if parent_folder_id is None:
-        validate_parent_folder(
-            db=db,
-            parent_folder_id=parent_folder_id,
-            current_user=current_user
-        )
-    return(
-        db.query(Folder)
-        .filter(
-            Folder.owner_id == current_user.id,
-            Folder.parent_folder_id == parent_folder_id,
-            Folder.is_deleted == False
-        )
-        .order_by(Folder.created_at.desc())
-        .all()
+    # if parent_folder_id is None:
+    #     validate_parent_folder(
+    #         db=db,
+    #         parent_folder_id=parent_folder_id,
+    #         current_user=current_user
+    #     )
+    
+    
+    query = db.query(Folder).filter(
+        Folder.owner_id == current_user.id,
+        Folder.parent_folder_id == parent_folder_id,
+        Folder.is_deleted == False
     )
+    
+    if search:
+        query = query.filter(Folder.name.ilike(f"%{search}%"))
+        
+    if sort_by == "oldest":
+        query = query.order_by(Folder.created_at.asc())
+    elif sort_by == "name":
+        query = query.order_by(Folder.name.asc())
+    else:
+        query = query.order_by(Folder.created_at.desc())
+
+    return query.all()
 
 def list_deleted_folders(
     db: Session,

@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -37,13 +37,17 @@ def create_new_folder(
 @router.get("", response_model=list[FolderResponse])
 def get_folders(
     parent_folder_id: UUID | None = None,
+    search: str | None = Query(default=None, max_length=255),
+    sort_by: str = Query(default="newest", pattern="^(newest|oldest|name)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     return list_folders(
         db=db,
         current_user=current_user,
-        parent_folder_id=parent_folder_id
+        parent_folder_id=parent_folder_id,
+        search=search,
+        sort_by=sort_by
     )
 
 @router.get("/trash", response_model=list[FolderResponse])
