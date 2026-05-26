@@ -52,13 +52,13 @@ def create_share_link(
     if share_data.password:
         password_hash = hash_password(share_data.password)
         
-        share_link = ShareLink(
-            token = token,
-            file_id = file_id,
-            owner_id = current_user.id,
-            password_hash = password_hash,
-            exipres_at = share_data.expires_at
-        )
+    share_link = ShareLink(
+        token = token,
+        file_id = file_id,
+        owner_id = current_user.id,
+        password_hash = password_hash,
+        expires_at = share_data.expires_at
+    )
     
     db.add(share_link)
     db.flush()
