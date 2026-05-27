@@ -1,6 +1,7 @@
 import secrets
 from uuid import UUID
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -213,3 +214,23 @@ def get_public_shared_file_metadata(
         "requires_password": share_link.password_hash is not None,
         "expires_at": share_link.expires_at
     }
+
+def get_public_shared_file_for_download(
+    db:Session,
+    token: str
+) -> File:
+    share_link = valid_public_share_link(
+        db=db,
+        token=token
+    )
+    
+    file_record = share_link.file
+    storage_path = Path(file_record.storage_path)
+    
+    if not storage_path.exists() or not storage_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Stored file not found on disk"
+        )
+    
+    return file_record

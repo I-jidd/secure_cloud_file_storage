@@ -1,14 +1,19 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import FileResponse as FastAPIFileResponse
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.api.deps import get_current_user
 from app.schemas.share_link import ShareLinkResponse, ShareLinkCreate, PublicShareFileResponse
 from app.models.user import User
-from app.services.share_link_service import create_share_link, disable_share_link, get_public_shared_file_metadata
-
+from app.services.share_link_service import (
+    create_share_link,
+    disable_share_link,
+    get_public_shared_file_metadata,
+    get_public_shared_file_for_download
+    )
 
 router = APIRouter(prefix="/share-links", tags=["Share Links"])
 
@@ -48,4 +53,20 @@ def get_public_shared_file(
     return get_public_shared_file_metadata(
         db = db,
         token=token
+    )
+
+@router.get("/public/{token}/download")
+def download_public_shared_file(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    file_record = get_public_shared_file_for_download(
+        db = db,
+        token=token
+    )
+    
+    return FastAPIFileResponse(
+        path=file_record.storage_path,
+        filename= file_record.original_name,
+        media_type= file_record.mime_type or "application/octet-stream"
     )
