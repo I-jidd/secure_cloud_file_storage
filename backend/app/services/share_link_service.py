@@ -307,3 +307,20 @@ def get_public_shared_file_for_download_with_password(
         )
 
     return file_record
+
+def list_share_links(
+    db:Session,
+    current_user: User
+) -> list[dict]:
+    
+    share_links = (
+        db.query(ShareLink)
+        .filter(ShareLink.owner_id == current_user.id)
+        .order_by(ShareLink.created_at.desc())
+        .all()
+    )
+    
+    return [
+        format_share_link_response(share_link)
+        for share_link in share_links
+    ]

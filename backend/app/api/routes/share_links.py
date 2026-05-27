@@ -15,10 +15,21 @@ from app.services.share_link_service import (
     get_public_shared_file_metadata,
     get_public_shared_file_for_download,
     verify_public_share_password,
+    list_share_links
     )
 
 router = APIRouter(prefix="/share-links", tags=["Share Links"])
 
+@router.get("", response_model=list[ShareLinkResponse])
+def get_share_links(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return list_share_links(
+        db=db,
+        current_user=current_user,
+    )
+    
 @router.post("/files/{file_id}", 
              response_model=ShareLinkResponse,
              status_code=status.HTTP_201_CREATED)
