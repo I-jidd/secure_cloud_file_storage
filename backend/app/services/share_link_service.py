@@ -76,3 +76,60 @@ def create_share_link(
     db.refresh(share_link)
     
     return format_share_link_response(share_link)
+
+def get_owned_share_link(
+    db:Session,
+    share_link_id: UUID,
+    current_user: User
+) -> ShareLink:
+    share_link = (
+        db.query(ShareLink)
+        .filter(ShareLink.id == share_link_id)
+        .first()
+    )
+
+    if share_link is None:
+        raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "Share link not found"
+        )
+    
+    if share_link.owner_id != current_user.id:
+        raise HTTPException(
+            status_code= status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to manage this share link"
+        )
+    return share_link
+
+def disable_share_link(
+    db: Session,
+    current_user: User,
+    share_link_id: UUID
+) -> dict:
+    share_link = get_owned_share_link(
+        db=db,
+        share_link_id=share_link_id,
+        current_user=current_user
+    )
+    
+    if not share_link.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Share link is already disabled"
+        )
+    
+    share_link.is_active = False
+    
+    create_activity_log(
+        db=db, 
+        current_user=current_user,
+        action="disable_share",
+        entity_id=share_link.file_id,
+        entity_type="file",
+        details="Disabled share link"
+    )
+    
+    db.commit()
+    db.refresh(share_link)
+    
+    return format_share_link_response(share_link)

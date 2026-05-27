@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.api.deps import get_current_user
 from app.schemas.share_link import ShareLinkResponse, ShareLinkCreate
-from app.services.share_link_service import create_share_link
+from app.services.share_link_service import create_share_link, disable_share_link
 from app.models.user import User
 
 
@@ -25,5 +25,17 @@ def generate_share_link(
         db=db,
         file_id=file_id,
         share_data=share_data,
+        current_user=current_user
+    )
+    
+@router.patch("/{share_link_id}/disable", response_model=ShareLinkResponse)
+def disable_existing_share_link(
+    share_link_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return disable_share_link(
+        share_link_id=share_link_id,
+        db=db,
         current_user=current_user
     )
