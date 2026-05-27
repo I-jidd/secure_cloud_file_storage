@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.models.file import File
 from app.models.share_link import ShareLink
 from app.models.user import User
@@ -219,6 +219,38 @@ def get_public_shared_file_metadata(
         "expires_at": share_link.expires_at
     }
 
+def verify_public_share_password(
+    db:Session,
+    token:str,
+    password: str
+) -> dict:
+    share_link = validate_public_share_link(
+        db = db,
+        token=token
+    )
+    
+    if share_link.password_hash is None:
+        return get_public_shared_file_metadata(
+            db = db,
+            token=token
+        )
+    
+    if not verify_password(password, share_link.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid share password"
+        )
+    file_record = share_link.file
+    
+    return {
+        "file_id": file_record.id,
+        "original_name": file_record.original_name,
+        "mime_type": file_record.mime_type,
+        "size_bytes": file_record.size_bytes,
+        "requires_password": True,
+        "expires_at": share_link.expires_at
+    }
+    
 def get_public_shared_file_for_download(
     db:Session,
     token: str

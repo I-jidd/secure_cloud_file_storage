@@ -7,6 +7,9 @@ class ShareLinkCreate(BaseModel):
     password: str | None = Field(default= None, min_length= 6, max_length=128)
     expires_at: datetime | None = None
     
+class SharePasswordVerify(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+    
 class ShareLinkResponse(BaseModel):
     id: UUID
     token: str

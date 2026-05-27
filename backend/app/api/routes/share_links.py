@@ -6,13 +6,14 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.api.deps import get_current_user
-from app.schemas.share_link import ShareLinkResponse, ShareLinkCreate, PublicShareFileResponse
+from app.schemas.share_link import ShareLinkResponse, ShareLinkCreate, PublicShareFileResponse, SharePasswordVerify
 from app.models.user import User
 from app.services.share_link_service import (
     create_share_link,
     disable_share_link,
     get_public_shared_file_metadata,
-    get_public_shared_file_for_download
+    get_public_shared_file_for_download,
+    verify_public_share_password
     )
 
 router = APIRouter(prefix="/share-links", tags=["Share Links"])
@@ -69,4 +70,20 @@ def download_public_shared_file(
         path=file_record.storage_path,
         filename= file_record.original_name,
         media_type= file_record.mime_type or "application/octet-stream"
+    )
+
+@router.post(
+    "/public/{token}/verify-password",
+    response_model=PublicShareFileResponse
+)
+
+def verify_shared_file_password(
+    token: str,
+    password_data: SharePasswordVerify,
+    db: Session = Depends(get_db)
+):
+    return verify_public_share_password(
+        db=db,
+        token=token,
+        password=password_data.password
     )
