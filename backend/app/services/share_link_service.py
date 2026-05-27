@@ -154,7 +154,7 @@ def get_share_link_by_token(
         
     return share_link
 
-def valid_public_share_link(
+def validate_public_share_link(
     db:Session,
     token: str
 ) -> ShareLink:
@@ -171,8 +171,12 @@ def valid_public_share_link(
         
     if share_link.expires_at is not None:
         current_time = datetime.now(timezone.utc)
-        
-        if share_link.expires_at < current_time:
+        expires_at = share_link.expires_at
+
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+        if expires_at < current_time:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Share link has expired"
@@ -199,7 +203,7 @@ def get_public_shared_file_metadata(
     token: str
 ) -> dict:
     
-    share_link = valid_public_share_link(
+    share_link = validate_public_share_link(
         db=db,
         token=token
     )
@@ -219,7 +223,7 @@ def get_public_shared_file_for_download(
     db:Session,
     token: str
 ) -> File:
-    share_link = valid_public_share_link(
+    share_link = validate_public_share_link(
         db=db,
         token=token
     )
