@@ -260,6 +260,12 @@ def get_public_shared_file_for_download(
         token=token
     )
     
+    if share_link.password_hash is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Password is required to download this shared file"
+        )
+    
     file_record = share_link.file
     storage_path = Path(file_record.storage_path)
     
@@ -269,4 +275,35 @@ def get_public_shared_file_for_download(
             detail="Stored file not found on disk"
         )
     
+    return file_record
+
+def get_public_shared_file_for_download_with_password(
+    db: Session,
+    token: str,
+    password: str
+) -> File:
+    share_link = validate_public_share_link(
+        db=db,
+        token=token
+    )
+    
+    if share_link.password_hash is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This shared file does not require a password"
+        )
+    if not verify_password(password, share_link.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid share password"
+        )
+    file_record = share_link.file
+    storage_path = Path(file_record.storage_path)
+
+    if not storage_path.exists() or not storage_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Stored file not found on disk"
+        )
+
     return file_record

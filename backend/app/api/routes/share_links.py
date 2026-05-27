@@ -11,9 +11,10 @@ from app.models.user import User
 from app.services.share_link_service import (
     create_share_link,
     disable_share_link,
+    get_public_shared_file_for_download_with_password,
     get_public_shared_file_metadata,
     get_public_shared_file_for_download,
-    verify_public_share_password
+    verify_public_share_password,
     )
 
 router = APIRouter(prefix="/share-links", tags=["Share Links"])
@@ -46,7 +47,7 @@ def disable_existing_share_link(
         current_user=current_user
     )
 
-@router.get("share/{token}", response_model=PublicShareFileResponse)
+@router.get("/share/{token}", response_model=PublicShareFileResponse)
 def get_public_shared_file(
     token: str,
     db:Session = Depends(get_db)
@@ -86,4 +87,22 @@ def verify_shared_file_password(
         db=db,
         token=token,
         password=password_data.password
+    )
+
+@router.post("/public/{token}/download-with-password")
+def download_public_shared_file_with_password(
+    token: str,
+    password_data: SharePasswordVerify,
+    db: Session = Depends(get_db)
+):
+    file_record =  get_public_shared_file_for_download_with_password(
+        db=db,
+        token=token,
+        password=password_data.password
+    )
+    
+    return FastAPIFileResponse(
+        path=file_record.storage_path,
+        filename=file_record.original_name,
+        media_type=file_record.mime_type or "application/octet-stream"
     )
