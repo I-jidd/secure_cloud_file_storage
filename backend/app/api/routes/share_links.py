@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.api.deps import get_current_user
-from app.schemas.share_link import ShareLinkResponse, ShareLinkCreate
-from app.services.share_link_service import create_share_link, disable_share_link
+from app.schemas.share_link import ShareLinkResponse, ShareLinkCreate, PublicShareFileResponse
 from app.models.user import User
+from app.services.share_link_service import create_share_link, disable_share_link, get_public_shared_file_metadata
 
 
 router = APIRouter(prefix="/share-links", tags=["Share Links"])
@@ -38,4 +38,14 @@ def disable_existing_share_link(
         share_link_id=share_link_id,
         db=db,
         current_user=current_user
+    )
+
+@router.get("share/{token}", response_model=PublicShareFileResponse)
+def get_public_shared_file(
+    token: str,
+    db:Session = Depends(get_db)
+):
+    return get_public_shared_file_metadata(
+        db = db,
+        token=token
     )

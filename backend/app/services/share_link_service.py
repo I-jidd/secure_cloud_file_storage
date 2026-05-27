@@ -1,5 +1,6 @@
 import secrets
 from uuid import UUID
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -133,3 +134,82 @@ def disable_share_link(
     db.refresh(share_link)
     
     return format_share_link_response(share_link)
+
+def get_share_link_by_token(
+    db:Session,
+    token: str
+) -> ShareLink:
+    share_link = (
+        db.query(ShareLink)
+        .filter(ShareLink.token == token)
+        .first()
+    )
+    
+    if share_link is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Share link not found"
+        )
+        
+    return share_link
+
+def valid_public_share_link(
+    db:Session,
+    token: str
+) -> ShareLink:
+    share_link = get_share_link_by_token(
+        db = db,
+        token=token
+    )
+    
+    if not share_link.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Share link is disabled"
+        )
+        
+    if share_link.expires_at is not None:
+        current_time = datetime.now(timezone.utc)
+        
+        if share_link.expires_at < current_time:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Share link has expired"
+            )
+            
+    file_record = share_link.file
+    
+    if file_record is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Shared file not found"
+        )
+    
+    if file_record.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Shared file is no longer available"
+        )
+    
+    return share_link
+
+def get_public_shared_file_metadata(
+    db:Session,
+    token: str
+) -> dict:
+    
+    share_link = valid_public_share_link(
+        db=db,
+        token=token
+    )
+    
+    file_record = share_link.file
+    
+    return {
+        "file_id": file_record.id,
+        "original_name": file_record.original_name,
+        "mime_type": file_record.mime_type,
+        "size_bytes": file_record.size_bytes,
+        "requires_password": share_link.password_hash is not None,
+        "expires_at": share_link.expires_at
+    }
