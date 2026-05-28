@@ -11,7 +11,7 @@ export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isLoading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isAuthenticated = Boolean(user);
 
@@ -20,25 +20,35 @@ export function AuthProvider({ children }) {
 
     if (!token) {
       setUser(null);
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
 
     try {
-      const response = await apiClient.get("/auth/me");
+      const response = await apiClient.get("/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       setUser(response.data);
     } catch (error) {
       removeAccessToken();
       setUser(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }
 
   async function login(accessToken) {
     setAccessToken(accessToken);
 
-    const response = await apiClient.get("/auth/me");
+    const response = await apiClient.get("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
     setUser(response.data);
 
     return response.data;
