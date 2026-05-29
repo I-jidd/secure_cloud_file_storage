@@ -8,6 +8,7 @@ import PublicSharePage from "../pages/PublicSharePage";
 import RegisterPage from "../pages/RegisterPage";
 import SharedLinksPage from "../pages/SharedLinksPage";
 import TrashPage from "../pages/TrashPage";
+import ProtectedRoute from "./ProtectedRoute";
 
 function AppRoutes() {
   return (
@@ -17,11 +18,50 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      <Route path="/dashboard" element={<DashboardPage />} />
-      <Route path="/files" element={<MyFilesPage />} />
-      <Route path="/trash" element={<TrashPage />} />
-      <Route path="/shared" element={<SharedLinksPage />} />
-      <Route path="/activity" element={<ActivityLogsPage />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/files"
+        element={
+          <ProtectedRoute>
+            <MyFilesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/trash"
+        element={
+          <ProtectedRoute>
+            <TrashPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/shared"
+        element={
+          <ProtectedRoute>
+            <SharedLinksPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/activity"
+        element={
+          <ProtectedRoute>
+            <ActivityLogsPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="/public/share/:token" element={<PublicSharePage />} />
 
