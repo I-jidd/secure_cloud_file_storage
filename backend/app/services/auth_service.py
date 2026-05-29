@@ -28,7 +28,7 @@ def create_user(db: Session, user_data: UserCreate) -> User:
         if existing_user.email == user_data.email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email is already registerd"
+                detail="Email is already registered"
             )
         raise HTTPException(
             status_code= status.HTTP_400_BAD_REQUEST,
