@@ -15,25 +15,33 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = Boolean(user);
 
+  function setAuthHeader(token) {
+    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
+  }
+
+  function clearAuthHeader() {
+    delete apiClient.defaults.headers.common.Authorization;
+  }
+
   async function loadCurrentUser() {
     const token = getAccessToken();
 
     if (!token) {
+      clearAuthHeader();
       setUser(null);
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await apiClient.get("/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      setAuthHeader(token);
+
+      const response = await apiClient.get("/auth/me");
 
       setUser(response.data);
     } catch (error) {
       removeAccessToken();
+      clearAuthHeader();
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -42,12 +50,9 @@ export function AuthProvider({ children }) {
 
   async function login(accessToken) {
     setAccessToken(accessToken);
+    setAuthHeader(accessToken);
 
-    const response = await apiClient.get("/auth/me", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await apiClient.get("/auth/me");
 
     setUser(response.data);
 
@@ -56,6 +61,7 @@ export function AuthProvider({ children }) {
 
   function logout() {
     removeAccessToken();
+    clearAuthHeader();
     setUser(null);
   }
 
