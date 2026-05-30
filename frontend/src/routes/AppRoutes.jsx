@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import AppLayout from "../layouts/AppLayout";
 import ActivityLogsPage from "../pages/ActivityLogsPage";
 import DashboardPage from "../pages/DashboardPage";
 import LoginPage from "../pages/LoginPage";
@@ -19,49 +20,18 @@ function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
 
       <Route
-        path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardPage />
+            <AppLayout />
           </ProtectedRoute>
         }
-      />
-
-      <Route
-        path="/files"
-        element={
-          <ProtectedRoute>
-            <MyFilesPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/trash"
-        element={
-          <ProtectedRoute>
-            <TrashPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/shared"
-        element={
-          <ProtectedRoute>
-            <SharedLinksPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/activity"
-        element={
-          <ProtectedRoute>
-            <ActivityLogsPage />
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/files" element={<MyFilesPage />} />
+        <Route path="/trash" element={<TrashPage />} />
+        <Route path="/shared" element={<SharedLinksPage />} />
+        <Route path="/activity" element={<ActivityLogsPage />} />
+      </Route>
 
       <Route path="/public/share/:token" element={<PublicSharePage />} />
 
