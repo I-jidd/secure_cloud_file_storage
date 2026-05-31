@@ -1,6 +1,64 @@
+import { useEffect, useState } from "react";
 import { FileText, Folder, Search, Upload } from "lucide-react";
 
+import { getFiles } from "../api/fileApi";
+import { getFolders } from "../api/folderApi";
+import { formatBytes } from "../utils/formatBytes";
+
 function MyFilesPage() {
+  const [folders, setFolders] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    async function loadMyFiles() {
+      try {
+        setIsLoading(true);
+        setErrorMessage("");
+
+        const [folderData, fileData] = await Promise.all([
+          getFolders(),
+          getFiles(),
+        ]);
+
+        setFolders(folderData);
+        setFiles(fileData);
+      } catch (error) {
+        setErrorMessage(error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadMyFiles();
+  }, []);
+
+  const filteredFolders = folders.filter((folder) =>
+    folder.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  const filteredFiles = files.filter((file) =>
+    file.original_name.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  if (isLoading) {
+    return (
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm text-slate-500">Loading files and folders...</p>
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-700 shadow-sm">
+        {errorMessage}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <section className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -25,6 +83,8 @@ function MyFilesPage() {
         <Search size={18} className="text-slate-400" />
         <input
           type="text"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search files and folders..."
           className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
         />
@@ -32,57 +92,102 @@ function MyFilesPage() {
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Folders</h2>
+          <div>
+            <h2 className="text-lg font-semibold">Folders</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {filteredFolders.length} folder
+              {filteredFolders.length === 1 ? "" : "s"} found
+            </p>
+          </div>
+
           <button className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100">
             New folder
           </button>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            "School Works",
-            "Family Photos",
-            "Encrypted PDFs",
-            "Shared Projects",
-          ].map((folder) => (
-            <div
-              key={folder}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-white hover:shadow-sm"
-            >
-              <Folder size={24} className="text-slate-500" />
-              <p className="mt-4 font-medium">{folder}</p>
-              <p className="mt-1 text-xs text-slate-500">Placeholder folder</p>
+        <div className="mt-5">
+          {filteredFolders.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {filteredFolders.map((folder) => (
+                <FolderCard key={folder.id} folder={folder} />
+              ))}
             </div>
-          ))}
+          ) : (
+            <EmptyState
+              title="No folders found"
+              message="Create a folder to organize your files."
+            />
+          )}
         </div>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Files</h2>
+        <div>
+          <h2 className="text-lg font-semibold">Files</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {filteredFiles.length} file{filteredFiles.length === 1 ? "" : "s"}{" "}
+            found
+          </p>
+        </div>
 
-        <div className="mt-5 divide-y divide-slate-100">
-          {[
-            "Capstone_Final_Report.pdf",
-            "Emergency_Response_Map.png",
-            "System_Backup_Notes.txt",
-          ].map((file) => (
-            <div key={file} className="flex items-center gap-4 py-4">
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-600">
-                <FileText size={20} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{file}</p>
-                <p className="text-xs text-slate-500">
-                  Placeholder file · API data later
-                </p>
-              </div>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-700">
-                Active
-              </span>
+        <div className="mt-5">
+          {filteredFiles.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {filteredFiles.map((file) => (
+                <FileRow key={file.id} file={file} />
+              ))}
             </div>
-          ))}
+          ) : (
+            <EmptyState
+              title="No files found"
+              message="Uploaded files will appear here."
+            />
+          )}
         </div>
       </section>
+    </div>
+  );
+}
+function FolderCard({ folder }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-white hover:shadow-sm">
+      <Folder size={24} className="text-slate-500" />
+
+      <p className="mt-4 truncate font-medium">{folder.name}</p>
+
+      <p className="mt-1 text-xs text-slate-500">
+        {folder.parent_folder_id ? "Subfolder" : "Root folder"}
+      </p>
+    </div>
+  );
+}
+
+function FileRow({ file }) {
+  return (
+    <div className="flex items-center gap-4 py-4">
+      <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-600">
+        <FileText size={20} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{file.original_name}</p>
+        <p className="text-xs text-slate-500">
+          {file.mime_type || "Unknown type"} · {formatBytes(file.size_bytes)}
+        </p>
+      </div>
+
+      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
+        Active
+      </span>
+    </div>
+  );
+}
+
+function EmptyState({ title, message }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+      <p className="text-sm font-medium text-slate-700">{title}</p>
+      <p className="mt-1 text-sm text-slate-500">{message}</p>
     </div>
   );
 }
