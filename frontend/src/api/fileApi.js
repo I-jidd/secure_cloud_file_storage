@@ -37,3 +37,8 @@ export async function downloadFile(fileId) {
 
   return response.data;
 }
+
+export async function deleteFile(fileId) {
+  const response = await apiClient.delete(`/files/${fileId}`);
+  return response.data;
+}

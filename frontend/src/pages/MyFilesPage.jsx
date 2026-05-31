@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
-import { Download, FileText, Folder, Search, Upload } from "lucide-react";
+import {
+  Download,
+  FileText,
+  Folder,
+  Search,
+  Upload,
+  Trash2,
+} from "lucide-react";
 
-import { getFiles, uploadFile, downloadFile } from "../api/fileApi";
+import { getFiles, uploadFile, downloadFile, deleteFile } from "../api/fileApi";
 import { getFolders, createFolder } from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
@@ -131,6 +138,29 @@ function MyFilesPage() {
       }
     }
   }
+  async function handleDeleteFile(file) {
+    const confirmed = window.confirm(`Move "${file.original_name}" to Trash?`);
+
+    if (!confirmed) {
+      return;
+    }
+    try {
+      setErrorMessage("");
+
+      await deleteFile(file.id);
+
+      await loadMyFiles();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to delete file.");
+      }
+    }
+  }
+
   const filteredFolders = folders.filter((folder) =>
     folder.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -246,6 +276,7 @@ function MyFilesPage() {
                   key={file.id}
                   file={file}
                   onDownload={handleDownloadFile}
+                  onDelete={handleDeleteFile}
                 />
               ))}
             </div>
@@ -274,7 +305,7 @@ function FolderCard({ folder }) {
   );
 }
 
-function FileRow({ file, onDownload }) {
+function FileRow({ file, onDownload, onDelete }) {
   return (
     <div className="flex items-center gap-4 py-4">
       <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-600">
@@ -292,14 +323,25 @@ function FileRow({ file, onDownload }) {
         Active
       </span>
 
-      <button
-        type="button"
-        onClick={() => onDownload(file)}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
-      >
-        <Download size={16} />
-        Download
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onDownload(file)}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+        >
+          <Download size={16} />
+          Download
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onDelete(file)}
+          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50"
+        >
+          <Trash2 size={16} />
+          Delete
+        </button>
+      </div>
     </div>
   );
 }
