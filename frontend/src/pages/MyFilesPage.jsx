@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FileText, Folder, Search, Upload } from "lucide-react";
 
-import { getFiles } from "../api/fileApi";
+import { getFiles, uploadFile } from "../api/fileApi";
 import { getFolders, createFolder } from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
@@ -12,6 +12,7 @@ function MyFilesPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   async function loadMyFiles() {
     try {
@@ -72,6 +73,36 @@ function MyFilesPage() {
     }
   }
 
+  async function handleUploadFile() {
+    const selectedFile = event.target.files?.[0];
+
+    if (!selectedFile) {
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      setErrorMessage("");
+
+      await uploadFile({
+        file: selectedFile,
+        folderId: null,
+      });
+
+      await loadMyFiles();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to upload file.");
+      }
+    } finally {
+      setIsUploading(false);
+      event.target.value = "";
+    }
+  }
   const filteredFolders = folders.filter((folder) =>
     folder.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -110,10 +141,17 @@ function MyFilesPage() {
           </p>
         </div>
 
-        <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800">
+        <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800">
           <Upload size={17} />
-          Upload file
-        </button>
+          {isUploading ? "Uploading..." : "Upload file"}
+
+          <input
+            type="file"
+            className="hidden"
+            onChange={handleUploadFile}
+            disabled={isUploading}
+          />
+        </label>
       </section>
 
       <section className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
