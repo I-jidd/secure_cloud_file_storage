@@ -29,3 +29,11 @@ export async function uploadFile({ file, folderId = null }) {
 
   return response.data;
 }
+
+export async function downloadFile(fileId) {
+  const response = await apiClient.get(`/files/${fileId}/download`, {
+    responseType: "blob",
+  });
+
+  return response.data;
+}

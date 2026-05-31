@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { FileText, Folder, Search, Upload } from "lucide-react";
+import { Download, FileText, Folder, Search, Upload } from "lucide-react";
 
-import { getFiles, uploadFile } from "../api/fileApi";
+import { getFiles, uploadFile, downloadFile } from "../api/fileApi";
 import { getFolders, createFolder } from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
@@ -101,6 +101,34 @@ function MyFilesPage() {
     } finally {
       setIsUploading(false);
       event.target.value = "";
+    }
+  }
+
+  async function handleDownloadFile(file) {
+    try {
+      setErrorMessage("");
+
+      const blob = await downloadFile(file.id);
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = file.original_name;
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      await loadMyFiles();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to download file.");
+      }
     }
   }
   const filteredFolders = folders.filter((folder) =>
@@ -214,7 +242,11 @@ function MyFilesPage() {
           {filteredFiles.length > 0 ? (
             <div className="divide-y divide-slate-100">
               {filteredFiles.map((file) => (
-                <FileRow key={file.id} file={file} />
+                <FileRow
+                  key={file.id}
+                  file={file}
+                  onDownload={handleDownloadFile}
+                />
               ))}
             </div>
           ) : (
@@ -242,7 +274,7 @@ function FolderCard({ folder }) {
   );
 }
 
-function FileRow({ file }) {
+function FileRow({ file, onDownload }) {
   return (
     <div className="flex items-center gap-4 py-4">
       <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-600">
@@ -259,6 +291,15 @@ function FileRow({ file }) {
       <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
         Active
       </span>
+
+      <button
+        type="button"
+        onClick={() => onDownload(file)}
+        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+      >
+        <Download size={16} />
+        Download
+      </button>
     </div>
   );
 }
