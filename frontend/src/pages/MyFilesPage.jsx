@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, Folder, Search, Upload } from "lucide-react";
 
 import { getFiles } from "../api/fileApi";
-import { getFolders } from "../api/folderApi";
+import { getFolders, createFolder } from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
 function MyFilesPage() {
@@ -11,29 +11,66 @@ function MyFilesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+
+  async function loadMyFiles() {
+    try {
+      setIsLoading(true);
+      setErrorMessage("");
+
+      const [folderData, fileData] = await Promise.all([
+        getFolders(),
+        getFiles(),
+      ]);
+
+      setFolders(folderData);
+      setFiles(fileData);
+    } catch (error) {
+      setErrorMessage("Failed to load files and folders.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function loadMyFiles() {
-      try {
-        setIsLoading(true);
-        setErrorMessage("");
-
-        const [folderData, fileData] = await Promise.all([
-          getFolders(),
-          getFiles(),
-        ]);
-
-        setFolders(folderData);
-        setFiles(fileData);
-      } catch (error) {
-        setErrorMessage(error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     loadMyFiles();
   }, []);
+
+  async function handleCreateFolder() {
+    const folderName = window.prompt("Enter folder name");
+
+    if (!folderName) {
+      return;
+    }
+
+    const trimmedName = folderName.trim();
+
+    if (!trimmedName) {
+      return;
+    }
+
+    try {
+      setIsCreatingFolder(true);
+      setErrorMessage("");
+
+      await createFolder({
+        name: trimmedName,
+        parentFolderId: null,
+      });
+
+      await loadMyFiles();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to create folder.");
+      }
+    } finally {
+      setIsCreatingFolder(false);
+    }
+  }
 
   const filteredFolders = folders.filter((folder) =>
     folder.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -100,8 +137,13 @@ function MyFilesPage() {
             </p>
           </div>
 
-          <button className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100">
-            New folder
+          <button
+            type="button"
+            onClick={handleCreateFolder}
+            disabled={isCreatingFolder}
+            className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isCreatingFolder ? "Creating..." : "New folder"}
           </button>
         </div>
 
