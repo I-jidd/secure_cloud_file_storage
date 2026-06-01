@@ -52,3 +52,10 @@ export async function restoreFile(fileId) {
   const response = await apiClient.patch(`/files/${fileId}/restore`);
   return response.data;
 }
+
+export async function renameFile(fileId, originalName) {
+  const response = await apiClient.patch(`/files/${fileId}`, {
+    original_name: originalName,
+  });
+  return response.data;
+}

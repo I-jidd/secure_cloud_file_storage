@@ -3,12 +3,19 @@ import {
   Download,
   FileText,
   Folder,
+  PencilLine,
   Search,
-  Upload,
   Trash2,
+  Upload,
 } from "lucide-react";
 
-import { getFiles, uploadFile, downloadFile, deleteFile } from "../api/fileApi";
+import {
+  getFiles,
+  uploadFile,
+  downloadFile,
+  deleteFile,
+  renameFile,
+} from "../api/fileApi";
 import { getFolders, createFolder, deleteFolder } from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
@@ -164,6 +171,36 @@ function MyFilesPage() {
       }
     }
   }
+
+  async function handleRenameFile(file) {
+    const newName = window.prompt("Enter new file name", file.original_name);
+
+    if (!newName) {
+      return;
+    }
+
+    const trimmedName = newName.trim();
+
+    if (!trimmedName || trimmedName === file.original_name) {
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+
+      await renameFile(file.id, trimmedName);
+
+      await loadMyFiles();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to rename file.");
+      }
+    }
+  }
   async function handleDeleteFile(file) {
     const confirmed = window.confirm(`Move "${file.original_name}" to Trash?`);
 
@@ -307,6 +344,7 @@ function MyFilesPage() {
                   file={file}
                   onDownload={handleDownloadFile}
                   onDelete={handleDeleteFile}
+                  onRename={handleRenameFile}
                 />
               ))}
             </div>
@@ -345,7 +383,7 @@ function FolderCard({ folder, onDelete }) {
   );
 }
 
-function FileRow({ file, onDownload, onDelete }) {
+function FileRow({ file, onDownload, onDelete, onRename }) {
   return (
     <div className="flex items-center gap-4 py-4">
       <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-600">
@@ -363,7 +401,16 @@ function FileRow({ file, onDownload, onDelete }) {
         Active
       </span>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onRename(file)}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+        >
+          <PencilLine size={16} />
+          Rename
+        </button>
+
         <button
           type="button"
           onClick={() => onDownload(file)}
