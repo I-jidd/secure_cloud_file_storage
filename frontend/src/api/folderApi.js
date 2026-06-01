@@ -25,3 +25,8 @@ export async function getDeletedFolders() {
   const response = await apiClient.get("/folders/trash");
   return response.data;
 }
+
+export async function restoreFolder(folderId) {
+  const response = await apiClient.patch(`/folders/${folderId}/restore`);
+  return response.data;
+}

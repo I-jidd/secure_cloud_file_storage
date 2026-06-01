@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, Folder, RotateCcw, Trash2 } from "lucide-react";
 
 import { getDeletedFiles, restoreFile } from "../api/fileApi";
-import { getDeletedFolders } from "../api/folderApi";
+import { getDeletedFolders, restoreFolder } from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
 function TrashPage() {
@@ -11,6 +11,7 @@ function TrashPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [restoringFileId, setRestoringFileId] = useState(null);
+  const [restoringFolderId, setRestoringFolderId] = useState(null);
 
   async function loadTrash() {
     try {
@@ -52,6 +53,30 @@ function TrashPage() {
       }
     } finally {
       setRestoringFileId(null);
+    }
+  }
+  async function handleRestoreFolder(folder) {
+    try {
+      setRestoringFolderId(folder.id);
+      setErrorMessage("");
+
+      await restoreFolder(folder.id);
+
+      await loadTrash();
+    } catch (error) {
+      console.log("RESTORE FOLDER ERROR STATUS:", error.response?.status);
+      console.log("RESTORE FOLDER ERROR DATA:", error.response?.data);
+      console.log("RESTORE FOLDER ERROR MESSAGE:", error.message);
+
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to restore folder.");
+      }
+    } finally {
+      setRestoringFolderId(null);
     }
   }
 
@@ -110,7 +135,12 @@ function TrashPage() {
               {deletedFolders.length > 0 ? (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {deletedFolders.map((folder) => (
-                    <DeletedFolderCard key={folder.id} folder={folder} />
+                    <DeletedFolderCard
+                      key={folder.id}
+                      folder={folder}
+                      onRestore={handleRestoreFolder}
+                      isRestoring={restoringFolderId === folder.id}
+                    />
                   ))}
                 </div>
               ) : (
@@ -151,22 +181,25 @@ function TrashPage() {
   );
 }
 
-function DeletedFolderCard({ folder }) {
+function DeletedFolderCard({ folder, onRestore, isRestoring }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <Folder size={24} className="text-slate-500" />
+
       <p className="mt-4 truncate font-medium">{folder.name}</p>
+
       <p className="mt-1 text-xs text-slate-500">
         Deleted {formatDate(folder.deleted_at)}
       </p>
 
       <button
         type="button"
-        disabled
-        className="mt-4 inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-400"
+        onClick={() => onRestore(folder)}
+        disabled={isRestoring}
+        className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <RotateCcw size={14} />
-        Restore soon
+        {isRestoring ? "Restoring..." : "Restore"}
       </button>
     </div>
   );
