@@ -47,3 +47,8 @@ export async function getDeletedFiles() {
   const response = await apiClient.get("/files/trash");
   return response.data;
 }
+
+export async function restoreFile(fileId) {
+  const response = await apiClient.patch(`/files/${fileId}/restore`);
+  return response.data;
+}

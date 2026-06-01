@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FileText, Folder, RotateCcw, Trash2 } from "lucide-react";
 
-import { getDeletedFiles } from "../api/fileApi";
+import { getDeletedFiles, restoreFile } from "../api/fileApi";
 import { getDeletedFolders } from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
@@ -10,28 +10,50 @@ function TrashPage() {
   const [deletedFolders, setDeletedFolders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [restoringFileId, setRestoringFileId] = useState(null);
 
-  useEffect(() => {
-    async function loadTrash() {
-      try {
-        setIsLoading(true);
-        setErrorMessage("");
+  async function loadTrash() {
+    try {
+      setIsLoading(true);
+      setErrorMessage("");
 
-        const [fileData, folderData] = await Promise.all([
-          getDeletedFiles,
-          getDeletedFolders,
-        ]);
+      const [fileData, folderData] = await Promise.all([
+        getDeletedFiles(),
+        getDeletedFolders(),
+      ]);
 
-        setDeletedFiles(fileData);
-        setDeletedFolders(folderData);
-      } catch (error) {
-        setErrorMessage("Failed to load trash");
-      } finally {
-        setIsLoading(false);
-      }
+      setDeletedFiles(fileData);
+      setDeletedFolders(folderData);
+    } catch (error) {
+      setErrorMessage("Failed to load trash");
+    } finally {
+      setIsLoading(false);
     }
+  }
+  useEffect(() => {
     loadTrash();
   }, []);
+
+  async function handleRestoreFile(file) {
+    try {
+      setRestoringFileId(file.id);
+      setErrorMessage("");
+
+      await restoreFile(file.id);
+
+      await loadTrash();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to restore file.");
+      }
+    } finally {
+      setRestoringFileId(null);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -110,7 +132,12 @@ function TrashPage() {
               {deletedFiles.length > 0 ? (
                 <div className="divide-y divide-slate-100">
                   {deletedFiles.map((file) => (
-                    <DeletedFileRow key={file.id} file={file} />
+                    <DeletedFileRow
+                      key={file.id}
+                      file={file}
+                      onRestore={handleRestoreFile}
+                      isRestoring={restoringFileId === file.id}
+                    />
                   ))}
                 </div>
               ) : (
@@ -145,7 +172,7 @@ function DeletedFolderCard({ folder }) {
   );
 }
 
-function DeletedFileRow({ file }) {
+function DeletedFileRow({ file, onRestore, isRestoring }) {
   return (
     <div className="flex items-center gap-4 py-4">
       <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-600">
@@ -166,11 +193,12 @@ function DeletedFileRow({ file }) {
 
       <button
         type="button"
-        disabled
-        className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-400"
+        onClick={() => onRestore(file)}
+        disabled={isRestoring}
+        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <RotateCcw size={16} />
-        Restore soon
+        {isRestoring ? "Restoring..." : "Restore"}
       </button>
     </div>
   );
