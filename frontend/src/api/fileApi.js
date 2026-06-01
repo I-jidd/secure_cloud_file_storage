@@ -42,3 +42,8 @@ export async function deleteFile(fileId) {
   const response = await apiClient.delete(`/files/${fileId}`);
   return response.data;
 }
+
+export async function getDeletedFiles() {
+  const response = await apiClient.get("/files/trash");
+  return response.data;
+}

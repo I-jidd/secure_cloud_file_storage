@@ -20,3 +20,8 @@ export async function createFolder({ name, parentFolderId = null }) {
 
   return response.data;
 }
+
+export async function getDeletedFolders() {
+  const response = await apiClient.get("/folders/trash");
+  return response.data;
+}
