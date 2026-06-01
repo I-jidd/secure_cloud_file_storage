@@ -111,7 +111,7 @@ def remove_file(
         file_id=file_id
     )
 
-@router.patch("/{folder_id}/restore", response_model=FileResponse)
+@router.patch("/{file_id}/restore", response_model=FileResponse)
 def restore_deleted_file(
     db:Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
