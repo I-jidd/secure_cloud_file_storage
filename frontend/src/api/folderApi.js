@@ -30,3 +30,8 @@ export async function restoreFolder(folderId) {
   const response = await apiClient.patch(`/folders/${folderId}/restore`);
   return response.data;
 }
+
+export async function deleteFolder(folderId) {
+  const response = await apiClient.delete(`/folders/${folderId}`);
+  return response.data;
+}

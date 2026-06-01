@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { getFiles, uploadFile, downloadFile, deleteFile } from "../api/fileApi";
-import { getFolders, createFolder } from "../api/folderApi";
+import { getFolders, createFolder, deleteFolder } from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
 function MyFilesPage() {
@@ -77,6 +77,32 @@ function MyFilesPage() {
       }
     } finally {
       setIsCreatingFolder(false);
+    }
+  }
+
+  async function handleDeleteFolder(folder) {
+    const confirmed = window.confirm(
+      `Move folder "${folder.name}" and its subfolders to Trash?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+
+      await deleteFolder(folder.id);
+
+      await loadMyFiles();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to delete folder.");
+      }
     }
   }
 
@@ -247,7 +273,11 @@ function MyFilesPage() {
           {filteredFolders.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {filteredFolders.map((folder) => (
-                <FolderCard key={folder.id} folder={folder} />
+                <FolderCard
+                  key={folder.id}
+                  folder={folder}
+                  onDelete={handleDeleteFolder}
+                />
               ))}
             </div>
           ) : (
@@ -291,10 +321,20 @@ function MyFilesPage() {
     </div>
   );
 }
-function FolderCard({ folder }) {
+function FolderCard({ folder, onDelete }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-white hover:shadow-sm">
-      <Folder size={24} className="text-slate-500" />
+      <div className="flex items-start justify-between gap-3">
+        <Folder size={24} className="text-slate-500" />
+
+        <button
+          type="button"
+          onClick={() => onDelete(folder)}
+          className="rounded-xl border border-red-200 px-2 py-1 text-xs text-red-700 transition hover:bg-red-50"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
 
       <p className="mt-4 truncate font-medium">{folder.name}</p>
 
