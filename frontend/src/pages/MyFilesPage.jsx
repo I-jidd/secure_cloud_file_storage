@@ -16,7 +16,12 @@ import {
   deleteFile,
   renameFile,
 } from "../api/fileApi";
-import { getFolders, createFolder, deleteFolder } from "../api/folderApi";
+import {
+  getFolders,
+  createFolder,
+  deleteFolder,
+  renameFolder,
+} from "../api/folderApi";
 import { formatBytes } from "../utils/formatBytes";
 
 function MyFilesPage() {
@@ -27,15 +32,18 @@ function MyFilesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [currentFolder, setCurrentFolder] = useState(null);
 
   async function loadMyFiles() {
     try {
       setIsLoading(true);
       setErrorMessage("");
 
+      const folderId = currentFolder?.id || null;
+
       const [folderData, fileData] = await Promise.all([
-        getFolders(),
-        getFiles(),
+        getFolders(folderId),
+        getFiles(folderId),
       ]);
 
       setFolders(folderData);
@@ -49,7 +57,7 @@ function MyFilesPage() {
 
   useEffect(() => {
     loadMyFiles();
-  }, []);
+  }, [currentFolder]);
 
   async function handleCreateFolder() {
     const folderName = window.prompt("Enter folder name");
@@ -70,7 +78,7 @@ function MyFilesPage() {
 
       await createFolder({
         name: trimmedName,
-        parentFolderId: null,
+        parentFolderId: currentFolder?.id || null,
       });
 
       await loadMyFiles();
@@ -113,7 +121,37 @@ function MyFilesPage() {
     }
   }
 
-  async function handleUploadFile() {
+  async function handleRenameFolder(folder) {
+    const newName = window.prompt("Enter new folder name", folder.name);
+
+    if (!newName) {
+      return;
+    }
+
+    const trimmedName = newName.trim();
+
+    if (!trimmedName || trimmedName === folder.name) {
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+
+      await renameFolder(folder.id, trimmedName);
+
+      await loadMyFiles();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to rename folder.");
+      }
+    }
+  }
+
+  async function handleUploadFile(event) {
     const selectedFile = event.target.files?.[0];
 
     if (!selectedFile) {
@@ -126,7 +164,7 @@ function MyFilesPage() {
 
       await uploadFile({
         file: selectedFile,
-        folderId: null,
+        folderId: currentFolder?.id || null,
       });
 
       await loadMyFiles();
@@ -201,6 +239,7 @@ function MyFilesPage() {
       }
     }
   }
+
   async function handleDeleteFile(file) {
     const confirmed = window.confirm(`Move "${file.original_name}" to Trash?`);
 
@@ -222,6 +261,16 @@ function MyFilesPage() {
         setErrorMessage("Failed to delete file.");
       }
     }
+  }
+
+  function handleOpenFolder(folder) {
+    setSearchTerm("");
+    setCurrentFolder(folder);
+  }
+
+  function handleBackToRoot() {
+    setSearchTerm("");
+    setCurrentFolder(null);
   }
 
   const filteredFolders = folders.filter((folder) =>
@@ -313,7 +362,9 @@ function MyFilesPage() {
                 <FolderCard
                   key={folder.id}
                   folder={folder}
+                  onOpen={handleOpenFolder}
                   onDelete={handleDeleteFolder}
+                  onRename={handleRenameFolder}
                 />
               ))}
             </div>
@@ -359,19 +410,31 @@ function MyFilesPage() {
     </div>
   );
 }
-function FolderCard({ folder, onDelete }) {
+function FolderCard({ folder, onDelete, onRename }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-white hover:shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <Folder size={24} className="text-slate-500" />
 
-        <button
-          type="button"
-          onClick={() => onDelete(folder)}
-          className="rounded-xl border border-red-200 px-2 py-1 text-xs text-red-700 transition hover:bg-red-50"
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onRename(folder)}
+            className="rounded-xl border border-slate-200 px-2 py-1 text-xs text-slate-700 transition hover:bg-slate-100"
+            title="Rename folder"
+          >
+            <PencilLine size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDelete(folder)}
+            className="rounded-xl border border-red-200 px-2 py-1 text-xs text-red-700 transition hover:bg-red-50"
+            title="Delete folder"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
       <p className="mt-4 truncate font-medium">{folder.name}</p>
