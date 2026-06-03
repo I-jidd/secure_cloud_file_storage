@@ -1,30 +1,57 @@
 import { useEffect, useState } from "react";
 import { Copy, Link2, Lock, ShieldCheck, ToggleLeft } from "lucide-react";
 
-import { getShareLinks } from "../api/shareLinkApi";
+import { disableShareLink, getShareLinks } from "../api/shareLinkApi";
 
 function SharedLinksPage() {
   const [shareLinks, setShareLinks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [disablingLinkId, setdisablingLinkId] = useState(null);
+
+  async function loadShareLinks() {
+    try {
+      setIsLoading(true);
+      setErrorMessage("");
+
+      const data = await getShareLinks();
+      setShareLinks(data);
+    } catch (error) {
+      setErrorMessage("Failed to load shared links.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function loadShareLinks() {
-      try {
-        setIsLoading(true);
-        setErrorMessage("");
-
-        const data = await getShareLinks();
-        setShareLinks(data);
-      } catch (error) {
-        setErrorMessage("Failed to load shared links.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     loadShareLinks();
   }, []);
+
+  async function handleDisableShareLink(shareLink) {
+    const confirmed = window.confirm("Disable this public share link?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setdisablingLinkId(shareLink.id);
+      setErrorMessage("");
+
+      await disableShareLink(shareLink.id);
+      await loadShareLinks();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to disable share link.");
+      }
+    } finally {
+      setDisablingLinkId(null);
+    }
+  }
 
   const activeLinks = shareLinks.filter((link) => link.is_active);
   const protectedLinks = shareLinks.filter((link) => link.has_password);
@@ -96,7 +123,12 @@ function SharedLinksPage() {
           {shareLinks.length > 0 ? (
             <div className="divide-y divide-slate-100">
               {shareLinks.map((shareLink) => (
-                <ShareLinkRow key={shareLink.id} shareLink={shareLink} />
+                <ShareLinkRow
+                  key={shareLink.id}
+                  shareLink={shareLink}
+                  onDisable={handleDisableShareLink}
+                  isDisabling={disablingLinkId === shareLink.id}
+                />
               ))}
             </div>
           ) : (
@@ -108,7 +140,7 @@ function SharedLinksPage() {
   );
 }
 
-function ShareLinkRow({ shareLink }) {
+function ShareLinkRow({ shareLink, onDisable, isDisabling }) {
   const publicUrl = `${window.location.origin}/public/share/${shareLink.token}`;
 
   async function handleCopy() {
@@ -157,14 +189,26 @@ function ShareLinkRow({ shareLink }) {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
-      >
-        <Copy size={16} />
-        Copy
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+        >
+          <Copy size={16} />
+          Copy
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onDisable(shareLink)}
+          disabled={!shareLink.is_active || isDisabling}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <ToggleLeft size={16} />
+          {isDisabling ? "Disabling..." : "Disable"}
+        </button>
+      </div>
     </div>
   );
 }
