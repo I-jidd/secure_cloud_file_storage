@@ -309,6 +309,25 @@ function MyFilesPage() {
             Browse your folders and files. Search, upload, rename, share,
             delete, and restore items securely.
           </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+            <button
+              type="button"
+              onClick={handleBackToRoot}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700 transition hover:bg-slate-100"
+            >
+              Root
+            </button>
+
+            {currentFolder && (
+              <>
+                <span className="text-slate-400">/</span>
+                <span className="rounded-full bg-slate-950 px-3 py-1 text-white">
+                  {currentFolder.name}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
         <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800">
@@ -338,7 +357,9 @@ function MyFilesPage() {
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Folders</h2>
+            <h2 className="text-lg font-semibold">
+              {currentFolder ? `Folders in ${currentFolder.name}` : "Folders"}
+            </h2>
             <p className="mt-1 text-sm text-slate-500">
               {filteredFolders.length} folder
               {filteredFolders.length === 1 ? "" : "s"} found
@@ -379,7 +400,9 @@ function MyFilesPage() {
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold">Files</h2>
+          <h2 className="text-lg font-semibold">
+            {currentFolder ? `Files in ${currentFolder.name}` : "Files"}
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             {filteredFiles.length} file{filteredFiles.length === 1 ? "" : "s"}{" "}
             found
@@ -410,11 +433,18 @@ function MyFilesPage() {
     </div>
   );
 }
-function FolderCard({ folder, onDelete, onRename }) {
+function FolderCard({ folder, onOpen, onDelete, onRename }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-white hover:shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <Folder size={24} className="text-slate-500" />
+        <button
+          type="button"
+          onClick={() => onOpen(folder)}
+          className="flex items-center gap-2 text-left text-slate-700 transition hover:text-slate-950"
+          title="Open folder"
+        >
+          <Folder size={24} className="text-slate-500" />
+        </button>
 
         <div className="flex items-center gap-2">
           <button
@@ -437,7 +467,13 @@ function FolderCard({ folder, onDelete, onRename }) {
         </div>
       </div>
 
-      <p className="mt-4 truncate font-medium">{folder.name}</p>
+      <button
+        type="button"
+        onClick={() => onOpen(folder)}
+        className="mt-4 block w-full truncate text-left font-medium transition hover:text-slate-600"
+      >
+        {folder.name}
+      </button>
 
       <p className="mt-1 text-xs text-slate-500">
         {folder.parent_folder_id ? "Subfolder" : "Root folder"}
