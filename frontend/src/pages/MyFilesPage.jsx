@@ -7,6 +7,7 @@ import {
   Search,
   Trash2,
   Upload,
+  Link2,
 } from "lucide-react";
 
 import {
@@ -22,6 +23,8 @@ import {
   deleteFolder,
   renameFolder,
 } from "../api/folderApi";
+import { createFileShareLink } from "../api/shareLinkApi";
+
 import { formatBytes } from "../utils/formatBytes";
 
 function MyFilesPage() {
@@ -263,6 +266,28 @@ function MyFilesPage() {
     }
   }
 
+  async function handleCreateShareLink(file) {
+    try {
+      setErrorMessage("");
+
+      const shareLink = await createFileShareLink(file.id);
+
+      const publicUrl = `${window.location.origin}/public/share/${shareLink.token}`;
+
+      await navigator.clipboard.writeText(publicUrl);
+
+      window.alert(`Share link copied to clipboard: \n${publicUrl}`);
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to create share link.");
+      }
+    }
+  }
+
   function handleOpenFolder(folder) {
     setSearchTerm("");
     setCurrentFolder(folder);
@@ -419,6 +444,7 @@ function MyFilesPage() {
                   onDownload={handleDownloadFile}
                   onDelete={handleDeleteFile}
                   onRename={handleRenameFile}
+                  onShare={handleCreateShareLink}
                 />
               ))}
             </div>
@@ -482,7 +508,7 @@ function FolderCard({ folder, onOpen, onDelete, onRename }) {
   );
 }
 
-function FileRow({ file, onDownload, onDelete, onRename }) {
+function FileRow({ file, onRename, onDownload, onDelete, onShare }) {
   return (
     <div className="flex items-center gap-4 py-4">
       <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-600">
@@ -508,6 +534,15 @@ function FileRow({ file, onDownload, onDelete, onRename }) {
         >
           <PencilLine size={16} />
           Rename
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onShare(file)}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+        >
+          <Link2 size={16} />
+          Share
         </button>
 
         <button
