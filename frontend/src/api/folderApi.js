@@ -36,7 +36,7 @@ export async function deleteFolder(folderId) {
   return response.data;
 }
 
-export async function renameFolder(folderId) {
+export async function renameFolder(folderId, name) {
   const response = await apiClient.patch(`/folders/${folderId}`, {
     name,
   });
