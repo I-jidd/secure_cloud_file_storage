@@ -7,3 +7,8 @@ export async function createFileShareLink(fileId, shareData = {}) {
   );
   return response.data;
 }
+
+export async function getShareLinks() {
+  const response = await apiClient.get("/share-links");
+  return response.data;
+}
