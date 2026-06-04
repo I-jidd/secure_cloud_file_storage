@@ -267,16 +267,44 @@ function MyFilesPage() {
   }
 
   async function handleCreateShareLink(file) {
+    const wantsPassword = window.confirm(
+      `Add a password to the share link for "${file.original_name}"?`,
+    );
+
+    let shareData = {};
+
+    if (wantsPassword) {
+      const password = window.prompt("Enter share password");
+
+      if (!password) {
+        return;
+      }
+
+      const trimmedPassword = password.trim();
+
+      if (trimmedPassword.length < 6) {
+        setErrorMessage("Share password must be at least 6 characters.");
+        return;
+      }
+
+      shareData = {
+        password: trimmedPassword,
+      };
+    }
+
     try {
       setErrorMessage("");
 
-      const shareLink = await createFileShareLink(file.id);
+      const shareLink = await createFileShareLink(file.id, shareData);
 
       const publicUrl = `${window.location.origin}/public/share/${shareLink.token}`;
 
-      await navigator.clipboard.writeText(publicUrl);
-
-      window.alert(`Share link copied to clipboard: \n${publicUrl}`);
+      try {
+        await navigator.clipboard.writeText(publicUrl);
+        window.alert(`Share link copied to clipboard:\n${publicUrl}`);
+      } catch {
+        window.prompt("Copy this share link:", publicUrl);
+      }
     } catch (error) {
       const detail = error.response?.data?.detail;
 
