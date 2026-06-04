@@ -271,7 +271,7 @@ function MyFilesPage() {
       `Add a password to the share link for "${file.original_name}"?`,
     );
 
-    let shareData = {};
+    const shareData = {};
 
     if (wantsPassword) {
       const password = window.prompt("Enter share password");
@@ -287,9 +287,35 @@ function MyFilesPage() {
         return;
       }
 
-      shareData = {
-        password: trimmedPassword,
-      };
+      shareData.password = trimmedPassword;
+    }
+
+    const wantsExpiration = window.confirm(
+      "Add an expiration date and time for this share link?",
+    );
+
+    if (wantsExpiration) {
+      const expirationInput = window.prompt(
+        "Enter expiration date/time using this format: YYYY-MM-DD HH:MM\nExample: 2027-01-01 18:30",
+      );
+
+      if (!expirationInput) {
+        return;
+      }
+
+      const expirationDate = parseExpirationInput(expirationInput);
+
+      if (!expirationDate) {
+        setErrorMessage("Invalid expiration format. Use YYYY-MM-DD HH:MM.");
+        return;
+      }
+
+      if (expirationDate <= new Date()) {
+        setErrorMessage("Expiration date must be in the future.");
+        return;
+      }
+
+      shareData.expires_at = expirationDate.toISOString();
     }
 
     try {
@@ -602,6 +628,32 @@ function EmptyState({ title, message }) {
       <p className="mt-1 text-sm text-slate-500">{message}</p>
     </div>
   );
+}
+
+function parseExpirationInput(value) {
+  const trimmedValue = value.trim();
+  const pattern = /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/;
+  const match = trimmedValue.match(pattern);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, hour, minute] = match;
+
+  const parsedDate = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+  );
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return parsedDate;
 }
 
 export default MyFilesPage;
