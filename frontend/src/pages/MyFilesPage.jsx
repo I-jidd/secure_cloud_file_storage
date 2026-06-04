@@ -48,6 +48,11 @@ function MyFilesPage() {
   const [renameFileName, setRenameFileName] = useState("");
   const [renameFileNameError, setRenameFileNameError] = useState("");
   const [isRenamingFile, setIsRenamingFile] = useState(false);
+  const [isRenameFolderModalOpen, setIsRenameFolderModalOpen] = useState(false);
+  const [folderToRename, setFolderToRename] = useState(null);
+  const [renameFolderName, setRenameFolderName] = useState("");
+  const [renameFolderNameError, setRenameFolderNameError] = useState("");
+  const [isRenamingFolder, setIsRenamingFolder] = useState(false);
 
   async function loadMyFiles() {
     try {
@@ -138,33 +143,54 @@ function MyFilesPage() {
     }
   }
 
-  async function handleRenameFolder(folder) {
-    const newName = window.prompt("Enter new folder name", folder.name);
-
-    if (!newName) {
+  async function handleRenameFolder() {
+    if (!folderToRename) {
       return;
     }
 
-    const trimmedName = newName.trim();
+    const trimmedName = renameFolderName.trim();
 
-    if (!trimmedName || trimmedName === folder.name) {
+    if (!trimmedName) {
+      setRenameFolderNameError("Folder name is required.");
+      return;
+    }
+
+    if (trimmedName.length > 100) {
+      setRenameFolderNameError("Folder name must be 100 characters or less.");
+      return;
+    }
+
+    if (trimmedName === folderToRename.name) {
+      closeRenameFolderModal();
       return;
     }
 
     try {
+      setIsRenamingFolder(true);
       setErrorMessage("");
+      setRenameFolderNameError("");
 
-      await renameFolder(folder.id, trimmedName);
+      await renameFolder(folderToRename.id, trimmedName);
 
+      if (currentFolder?.id === folderToRename.id) {
+        setCurrentFolder({
+          ...folderToRename,
+          name: trimmedName,
+        });
+      }
+
+      closeRenameFolderModal();
       await loadMyFiles();
     } catch (error) {
       const detail = error.response?.data?.detail;
 
       if (typeof detail === "string") {
-        setErrorMessage(detail);
+        setRenameFolderNameError(detail);
       } else {
-        setErrorMessage("Failed to rename folder.");
+        setRenameFolderNameError("Failed to rename folder.");
       }
+    } finally {
+      setIsRenamingFolder(false);
     }
   }
 
@@ -291,6 +317,7 @@ function MyFilesPage() {
       }
     }
   }
+
   async function handleCreateShareLink(file) {
     const wantsPassword = window.confirm(
       `Add a password to the share link for "${file.original_name}"?`,
@@ -398,6 +425,24 @@ function MyFilesPage() {
     setFileToRename(null);
     setRenameFileName("");
     setRenameFileNameError("");
+  }
+
+  function openRenameFolderModal(folder) {
+    setFolderToRename(folder);
+    setRenameFolderName(folder.name);
+    setRenameFolderNameError("");
+    setIsRenameFolderModalOpen(true);
+  }
+
+  function closeRenameFolderModal() {
+    if (isRenamingFolder) {
+      return;
+    }
+
+    setIsRenameFolderModalOpen(false);
+    setFolderToRename(null);
+    setRenameFolderName("");
+    setRenameFolderNameError("");
   }
 
   function handleOpenFolder(folder) {
@@ -520,8 +565,8 @@ function MyFilesPage() {
                   key={folder.id}
                   folder={folder}
                   onOpen={handleOpenFolder}
+                  onRename={openRenameFolderModal}
                   onDelete={handleDeleteFolder}
-                  onRename={handleRenameFolder}
                 />
               ))}
             </div>
@@ -610,6 +655,27 @@ function MyFilesPage() {
           }}
           placeholder="Example: report.pdf"
           error={renameFileNameError}
+          autoFocus
+        />
+      </Modal>
+      <Modal
+        isOpen={isRenameFolderModalOpen}
+        title="Rename folder"
+        description="Change the folder name. Ownership and folder location will remain unchanged."
+        confirmText="Save changes"
+        onClose={closeRenameFolderModal}
+        onConfirm={handleRenameFolder}
+        isSubmitting={isRenamingFolder}
+      >
+        <Input
+          label="Folder name"
+          value={renameFolderName}
+          onChange={(event) => {
+            setRenameFolderName(event.target.value);
+            setRenameFolderNameError("");
+          }}
+          placeholder="Example: School Works"
+          error={renameFolderNameError}
           autoFocus
         />
       </Modal>
