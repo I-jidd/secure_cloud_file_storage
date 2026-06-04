@@ -11,7 +11,7 @@ def get_dashboard_summary(
     current_user: User
 )-> dict:
     storage_used_bytes = (
-        db.query(func.coalesce(func.sum(File.size_bytes)), 0)
+        db.query(func.coalesce(func.sum(File.size_bytes), 0))
         .filter(
             File.owner_id == current_user.id,
             File.is_deleted == False
