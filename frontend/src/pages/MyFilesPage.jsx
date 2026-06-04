@@ -38,6 +38,7 @@ function MyFilesPage() {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [currentFolder, setCurrentFolder] = useState(null);
+  const [folderPath, setFolderPath] = useState([]);
 
   //Modals
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
@@ -139,6 +140,17 @@ function MyFilesPage() {
         setCurrentFolder(null);
       }
 
+      setFolderPath((currentPath) =>
+        currentPath.map((folder) =>
+          folder.id === folderToRename.id
+            ? {
+                ...folder,
+                name: trimmedName,
+              }
+            : folder,
+        ),
+      );
+
       closeDeleteModal();
       await loadMyFiles();
     } catch (error) {
@@ -189,6 +201,16 @@ function MyFilesPage() {
           name: trimmedName,
         });
       }
+      setFolderPath((currentPath) =>
+        currentPath.map((folder) =>
+          folder.id === folderToRename.id
+            ? {
+                ...folder,
+                name: trimmedName,
+              }
+            : folder,
+        ),
+      );
 
       closeRenameFolderModal();
       await loadMyFiles();
@@ -516,11 +538,30 @@ function MyFilesPage() {
   function handleOpenFolder(folder) {
     setSearchTerm("");
     setCurrentFolder(folder);
+
+    setFolderPath((currentPath) => {
+      const existingIndex = currentPath.findIndex(
+        (pathFolder) => pathFolder.id === folder.id,
+      );
+
+      if (existingIndex !== -1) {
+        return currentPath.slice(0, existingIndex + 1);
+      }
+
+      return [...currentPath, folder];
+    });
   }
 
   function handleBackToRoot() {
     setSearchTerm("");
     setCurrentFolder(null);
+    setFolderPath([]);
+  }
+
+  function handleBreadcrumbClick(folder, index) {
+    setSearchTerm("");
+    setCurrentFolder(folder);
+    setFolderPath((currentPath) => currentPath.slice(0, index + 1));
   }
 
   const filteredFolders = folders.filter((folder) =>
@@ -564,19 +605,38 @@ function MyFilesPage() {
             <button
               type="button"
               onClick={handleBackToRoot}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700 transition hover:bg-slate-100"
+              className={[
+                "rounded-full border px-3 py-1 transition",
+                folderPath.length === 0
+                  ? "border-slate-950 bg-slate-950 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100",
+              ].join(" ")}
             >
               Root
             </button>
 
-            {currentFolder && (
-              <>
-                <span className="text-slate-400">/</span>
-                <span className="rounded-full bg-slate-950 px-3 py-1 text-white">
-                  {currentFolder.name}
-                </span>
-              </>
-            )}
+            {folderPath.map((folder, index) => {
+              const isLast = index === folderPath.length - 1;
+
+              return (
+                <div key={folder.id} className="flex items-center gap-2">
+                  <span className="text-slate-400">/</span>
+
+                  <button
+                    type="button"
+                    onClick={() => handleBreadcrumbClick(folder, index)}
+                    className={[
+                      "max-w-[160px] truncate rounded-full border px-3 py-1 transition",
+                      isLast
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100",
+                    ].join(" ")}
+                  >
+                    {folder.name}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
 
