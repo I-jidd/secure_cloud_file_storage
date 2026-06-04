@@ -58,7 +58,7 @@ def disable_existing_share_link(
         current_user=current_user
     )
 
-@router.get("/share/{token}", response_model=PublicShareFileResponse)
+@router.get("/public/{token}", response_model=PublicShareFileResponse)
 def get_public_shared_file(
     token: str,
     db:Session = Depends(get_db)
