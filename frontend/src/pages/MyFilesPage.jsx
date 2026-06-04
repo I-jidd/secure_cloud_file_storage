@@ -53,6 +53,10 @@ function MyFilesPage() {
   const [renameFolderName, setRenameFolderName] = useState("");
   const [renameFolderNameError, setRenameFolderNameError] = useState("");
   const [isRenamingFolder, setIsRenamingFolder] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteTargetType, setDeleteTargetType] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function loadMyFiles() {
     try {
@@ -118,19 +122,17 @@ function MyFilesPage() {
   }
 
   async function handleDeleteFolder(folder) {
-    const confirmed = window.confirm(
-      `Move folder "${folder.name}" and its subfolders to Trash?`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
+      setIsDeleting(true);
       setErrorMessage("");
 
       await deleteFolder(folder.id);
 
+      if (currentFolder?.id === folder.id) {
+        setCurrentFolder(null);
+      }
+
+      closeDeleteModal();
       await loadMyFiles();
     } catch (error) {
       const detail = error.response?.data?.detail;
@@ -140,6 +142,8 @@ function MyFilesPage() {
       } else {
         setErrorMessage("Failed to delete folder.");
       }
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -296,16 +300,13 @@ function MyFilesPage() {
   }
 
   async function handleDeleteFile(file) {
-    const confirmed = window.confirm(`Move "${file.original_name}" to Trash?`);
-
-    if (!confirmed) {
-      return;
-    }
     try {
+      setIsDeleting(true);
       setErrorMessage("");
 
       await deleteFile(file.id);
 
+      closeDeleteModal();
       await loadMyFiles();
     } catch (error) {
       const detail = error.response?.data?.detail;
@@ -315,6 +316,8 @@ function MyFilesPage() {
       } else {
         setErrorMessage("Failed to delete file.");
       }
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -445,6 +448,43 @@ function MyFilesPage() {
     setRenameFolderNameError("");
   }
 
+  function openDeleteFileModal(file) {
+    setDeleteTarget(file);
+    setDeleteTargetType("file");
+    setIsDeleteModalOpen(true);
+  }
+
+  function openDeleteFolderModal(folder) {
+    setDeleteTarget(folder);
+    setDeleteTargetType("folder");
+    setIsDeleteModalOpen(true);
+  }
+
+  function closeDeleteModal() {
+    if (isDeleting) {
+      return;
+    }
+
+    setDeleteTarget(null);
+    setDeleteTargetType("");
+    setIsDeleteModalOpen(false);
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) {
+      return;
+    }
+
+    if (deleteTargetType === "file") {
+      handleDeleteFile(deleteTarget);
+      return;
+    }
+
+    if (deleteTargetType === "folder") {
+      handleDeleteFolder(deleteTarget);
+    }
+  }
+
   function handleOpenFolder(folder) {
     setSearchTerm("");
     setCurrentFolder(folder);
@@ -566,7 +606,7 @@ function MyFilesPage() {
                   folder={folder}
                   onOpen={handleOpenFolder}
                   onRename={openRenameFolderModal}
-                  onDelete={handleDeleteFolder}
+                  onDelete={openDeleteFolderModal}
                 />
               ))}
             </div>
@@ -599,7 +639,7 @@ function MyFilesPage() {
                   file={file}
                   onRename={openRenameFileModal}
                   onDownload={handleDownloadFile}
-                  onDelete={handleDeleteFile}
+                  onDelete={openDeleteFileModal}
                   onShare={handleCreateShareLink}
                 />
               ))}
@@ -679,6 +719,24 @@ function MyFilesPage() {
           autoFocus
         />
       </Modal>
+      <Modal
+        isOpen={isDeleteModalOpen}
+        title={
+          deleteTargetType === "folder"
+            ? "Move folder to Trash?"
+            : "Move file to Trash?"
+        }
+        description={
+          deleteTargetType === "folder"
+            ? `This will move "${deleteTarget?.name}" and its subfolders to Trash. You can restore it later.`
+            : `This will move "${deleteTarget?.original_name}" to Trash. You can restore it later.`
+        }
+        confirmText={isDeleting ? "Deleting..." : "Move to Trash"}
+        confirmVariant="danger"
+        onClose={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+        isSubmitting={isDeleting}
+      />
     </div>
   );
 }
