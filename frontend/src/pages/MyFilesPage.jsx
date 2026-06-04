@@ -39,9 +39,15 @@ function MyFilesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [currentFolder, setCurrentFolder] = useState(null);
 
+  //Modals
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderNameError, setNewFolderNameError] = useState("");
+  const [isRenameFileModalOpen, setIsRenameFileModalOpen] = useState(false);
+  const [fileToRename, setFileToRename] = useState(null);
+  const [renameFileName, setRenameFileName] = useState("");
+  const [renameFileNameError, setRenameFileNameError] = useState("");
+  const [isRenamingFile, setIsRenamingFile] = useState(false);
 
   async function loadMyFiles() {
     try {
@@ -170,26 +176,24 @@ function MyFilesPage() {
     }
 
     try {
-      setIsUploading(true);
+      setIsRenamingFile(true);
       setErrorMessage("");
+      setRenameFileNameError("");
 
-      await uploadFile({
-        file: selectedFile,
-        folderId: currentFolder?.id || null,
-      });
+      await renameFile(fileToRename.id, trimmedName);
 
+      closeRenameFileModal();
       await loadMyFiles();
     } catch (error) {
       const detail = error.response?.data?.detail;
 
       if (typeof detail === "string") {
-        setErrorMessage(detail);
+        setRenameFileNameError(detail);
       } else {
-        setErrorMessage("Failed to upload file.");
+        setRenameFileNameError("Failed to rename file.");
       }
     } finally {
-      setIsUploading(false);
-      event.target.value = "";
+      setIsRenamingFile(false);
     }
   }
 
@@ -221,33 +225,47 @@ function MyFilesPage() {
     }
   }
 
-  async function handleRenameFile(file) {
-    const newName = window.prompt("Enter new file name", file.original_name);
-
-    if (!newName) {
+  async function handleRenameFile() {
+    if (!fileToRename) {
       return;
     }
 
-    const trimmedName = newName.trim();
+    const trimmedName = renameFileName.trim();
 
-    if (!trimmedName || trimmedName === file.original_name) {
+    if (!trimmedName) {
+      setRenameFileNameError("File name is required.");
+      return;
+    }
+
+    if (trimmedName.length > 255) {
+      setRenameFileNameError("File name must be 255 characters or less.");
+      return;
+    }
+
+    if (trimmedName === fileToRename.original_name) {
+      closeRenameFileModal();
       return;
     }
 
     try {
+      setIsRenamingFile(true);
       setErrorMessage("");
+      setRenameFileNameError("");
 
-      await renameFile(file.id, trimmedName);
+      await renameFile(fileToRename.id, trimmedName);
 
+      closeRenameFileModal();
       await loadMyFiles();
     } catch (error) {
       const detail = error.response?.data?.detail;
 
       if (typeof detail === "string") {
-        setErrorMessage(detail);
+        setRenameFileNameError(detail);
       } else {
-        setErrorMessage("Failed to rename file.");
+        setRenameFileNameError("Failed to rename file.");
       }
+    } finally {
+      setIsRenamingFile(false);
     }
   }
 
@@ -273,22 +291,6 @@ function MyFilesPage() {
       }
     }
   }
-
-  function openCreateFolderModal() {
-    setNewFolderName("");
-    setNewFolderNameError("");
-    setIsCreateFolderModalOpen(true);
-  }
-
-  function closeCreateFolderModal() {
-    if (isCreatingFolder) {
-      return;
-    }
-    setIsCreateFolderModalOpen(false);
-    setNewFolderName("");
-    setNewFolderNameError("");
-  }
-
   async function handleCreateShareLink(file) {
     const wantsPassword = window.confirm(
       `Add a password to the share link for "${file.original_name}"?`,
@@ -363,6 +365,39 @@ function MyFilesPage() {
         setErrorMessage("Failed to create share link.");
       }
     }
+  }
+
+  function openCreateFolderModal() {
+    setNewFolderName("");
+    setNewFolderNameError("");
+    setIsCreateFolderModalOpen(true);
+  }
+
+  function closeCreateFolderModal() {
+    if (isCreatingFolder) {
+      return;
+    }
+    setIsCreateFolderModalOpen(false);
+    setNewFolderName("");
+    setNewFolderNameError("");
+  }
+
+  function openRenameFileModal(file) {
+    setFileToRename(file);
+    setRenameFileName(file.original_name);
+    setRenameFileNameError("");
+    setIsRenameFileModalOpen(true);
+  }
+
+  function closeRenameFileModal() {
+    if (isRenamingFile) {
+      return;
+    }
+
+    setIsRenameFileModalOpen(false);
+    setFileToRename(null);
+    setRenameFileName("");
+    setRenameFileNameError("");
   }
 
   function handleOpenFolder(folder) {
@@ -517,9 +552,9 @@ function MyFilesPage() {
                 <FileRow
                   key={file.id}
                   file={file}
+                  onRename={openRenameFileModal}
                   onDownload={handleDownloadFile}
                   onDelete={handleDeleteFile}
-                  onRename={handleRenameFile}
                   onShare={handleCreateShareLink}
                 />
               ))}
@@ -554,6 +589,27 @@ function MyFilesPage() {
           }}
           placeholder="Example: School Works"
           error={newFolderNameError}
+          autoFocus
+        />
+      </Modal>
+      <Modal
+        isOpen={isRenameFileModalOpen}
+        title="Rename file"
+        description="Change the display name of this file. The stored backend filename will remain unchanged."
+        confirmText="Save changes"
+        onClose={closeRenameFileModal}
+        onConfirm={handleRenameFile}
+        isSubmitting={isRenamingFile}
+      >
+        <Input
+          label="File name"
+          value={renameFileName}
+          onChange={(event) => {
+            setRenameFileName(event.target.value);
+            setRenameFileNameError("");
+          }}
+          placeholder="Example: report.pdf"
+          error={renameFileNameError}
           autoFocus
         />
       </Modal>
