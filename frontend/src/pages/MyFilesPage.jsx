@@ -9,7 +9,9 @@ import {
   Upload,
   Link2,
 } from "lucide-react";
-
+import Button from "../components/Button";
+import Input from "../components/Input";
+import Modal from "../components/Modal";
 import {
   getFiles,
   uploadFile,
@@ -37,6 +39,10 @@ function MyFilesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [currentFolder, setCurrentFolder] = useState(null);
 
+  const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderNameError, setNewFolderNameError] = useState("");
+
   async function loadMyFiles() {
     try {
       setIsLoading(true);
@@ -63,35 +69,37 @@ function MyFilesPage() {
   }, [currentFolder]);
 
   async function handleCreateFolder() {
-    const folderName = window.prompt("Enter folder name");
+    const trimmedName = newFolderName.trim();
 
-    if (!folderName) {
+    if (!trimmedName) {
+      setNewFolderNameError("Folder name is required.");
       return;
     }
 
-    const trimmedName = folderName.trim();
-
-    if (!trimmedName) {
+    if (trimmedName.length > 100) {
+      setNewFolderNameError("Folder name must be 100 characters or less.");
       return;
     }
 
     try {
       setIsCreatingFolder(true);
       setErrorMessage("");
+      setNewFolderNameError("");
 
       await createFolder({
         name: trimmedName,
         parentFolderId: currentFolder?.id || null,
       });
 
+      closeCreateFolderModal();
       await loadMyFiles();
     } catch (error) {
       const detail = error.response?.data?.detail;
 
       if (typeof detail === "string") {
-        setErrorMessage(detail);
+        setNewFolderNameError(detail);
       } else {
-        setErrorMessage("Failed to create folder.");
+        setNewFolderNameError("Failed to create folder.");
       }
     } finally {
       setIsCreatingFolder(false);
@@ -264,6 +272,21 @@ function MyFilesPage() {
         setErrorMessage("Failed to delete file.");
       }
     }
+  }
+
+  function openCreateFolderModal() {
+    setNewFolderName("");
+    setNewFolderNameError("");
+    setIsCreateFolderModalOpen(true);
+  }
+
+  function closeCreateFolderModal() {
+    if (isCreatingFolder) {
+      return;
+    }
+    setIsCreateFolderModalOpen(false);
+    setNewFolderName("");
+    setNewFolderNameError("");
   }
 
   async function handleCreateShareLink(file) {
@@ -445,14 +468,13 @@ function MyFilesPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleCreateFolder}
+          <Button
+            variant="secondary"
+            onClick={openCreateFolderModal}
             disabled={isCreatingFolder}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isCreatingFolder ? "Creating..." : "New folder"}
-          </button>
+            New folder
+          </Button>
         </div>
 
         <div className="mt-5">
@@ -510,6 +532,31 @@ function MyFilesPage() {
           )}
         </div>
       </section>
+      <Modal
+        isOpen={isCreateFolderModalOpen}
+        title="Create folder"
+        description={
+          currentFolder
+            ? `Create a new folder inside "${currentFolder.name}".`
+            : "Create a new folder at the root level."
+        }
+        confirmText="Create folder"
+        onClose={closeCreateFolderModal}
+        onConfirm={handleCreateFolder}
+        isSubmitting={isCreatingFolder}
+      >
+        <Input
+          label="Folder name"
+          value={newFolderName}
+          onChange={(event) => {
+            setNewFolderName(event.target.value);
+            setNewFolderNameError("");
+          }}
+          placeholder="Example: School Works"
+          error={newFolderNameError}
+          autoFocus
+        />
+      </Modal>
     </div>
   );
 }
