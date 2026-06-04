@@ -57,6 +57,13 @@ function MyFilesPage() {
   const [deleteTargetType, setDeleteTargetType] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [fileToShare, setFileToShare] = useState(null);
+  const [sharePassword, setSharePassword] = useState("");
+  const [shareExpiration, setShareExpiration] = useState("");
+  const [shareError, setShareError] = useState("");
+  const [isCreatingShareLink, setIsCreatingShareLink] = useState(false);
+  const [createdShareUrl, setCreatedShareUrl] = useState("");
 
   async function loadMyFiles() {
     try {
@@ -321,52 +328,35 @@ function MyFilesPage() {
     }
   }
 
-  async function handleCreateShareLink(file) {
-    const wantsPassword = window.confirm(
-      `Add a password to the share link for "${file.original_name}"?`,
-    );
+  async function handleCreateShareLink() {
+    if (!fileToShare) {
+      return;
+    }
 
     const shareData = {};
 
-    if (wantsPassword) {
-      const password = window.prompt("Enter share password");
+    const trimmedPassword = sharePassword.trim();
+    const trimmedExpiration = shareExpiration.trim();
 
-      if (!password) {
-        return;
-      }
-
-      const trimmedPassword = password.trim();
-
+    if (trimmedPassword) {
       if (trimmedPassword.length < 6) {
-        setErrorMessage("Share password must be at least 6 characters.");
+        setShareError("Share password must be at least 6 characters.");
         return;
       }
 
       shareData.password = trimmedPassword;
     }
 
-    const wantsExpiration = window.confirm(
-      "Add an expiration date and time for this share link?",
-    );
-
-    if (wantsExpiration) {
-      const expirationInput = window.prompt(
-        "Enter expiration date/time using this format: YYYY-MM-DD HH:MM\nExample: 2027-01-01 18:30",
-      );
-
-      if (!expirationInput) {
-        return;
-      }
-
-      const expirationDate = parseExpirationInput(expirationInput);
+    if (trimmedExpiration) {
+      const expirationDate = parseExpirationInput(trimmedExpiration);
 
       if (!expirationDate) {
-        setErrorMessage("Invalid expiration format. Use YYYY-MM-DD HH:MM.");
+        setShareError("Invalid expiration format. Use YYYY-MM-DD HH:MM.");
         return;
       }
 
       if (expirationDate <= new Date()) {
-        setErrorMessage("Expiration date must be in the future.");
+        setShareError("Expiration date must be in the future.");
         return;
       }
 
@@ -374,26 +364,42 @@ function MyFilesPage() {
     }
 
     try {
+      setIsCreatingShareLink(true);
+      setShareError("");
       setErrorMessage("");
 
-      const shareLink = await createFileShareLink(file.id, shareData);
-
+      const shareLink = await createFileShareLink(fileToShare.id, shareData);
       const publicUrl = `${window.location.origin}/public/share/${shareLink.token}`;
+
+      setCreatedShareUrl(publicUrl);
 
       try {
         await navigator.clipboard.writeText(publicUrl);
-        window.alert(`Share link copied to clipboard:\n${publicUrl}`);
-      } catch {
-        window.prompt("Copy this share link:", publicUrl);
-      }
+      } catch {}
     } catch (error) {
       const detail = error.response?.data?.detail;
 
       if (typeof detail === "string") {
-        setErrorMessage(detail);
+        setShareError(detail);
       } else {
-        setErrorMessage("Failed to create share link.");
+        setShareError("Failed to create share link.");
       }
+    } finally {
+      setIsCreatingShareLink(false);
+    }
+  }
+
+  async function handleCopyCreatedShareUrl() {
+    if (!createdShareUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(createdShareUrl);
+    } catch {
+      setShareError(
+        "Could not copy automatically. Please copy the link manually.",
+      );
     }
   }
 
@@ -483,6 +489,28 @@ function MyFilesPage() {
     if (deleteTargetType === "folder") {
       handleDeleteFolder(deleteTarget);
     }
+  }
+
+  function openShareModal(file) {
+    setFileToShare(file);
+    setSharePassword("");
+    setShareExpiration("");
+    setShareError("");
+    setCreatedShareUrl("");
+    setIsShareModalOpen(true);
+  }
+
+  function closeShareModal() {
+    if (isCreatingShareLink) {
+      return;
+    }
+
+    setIsShareModalOpen(false);
+    setFileToShare(null);
+    setSharePassword("");
+    setShareExpiration("");
+    setShareError("");
+    setCreatedShareUrl("");
   }
 
   function handleOpenFolder(folder) {
@@ -640,7 +668,7 @@ function MyFilesPage() {
                   onRename={openRenameFileModal}
                   onDownload={handleDownloadFile}
                   onDelete={openDeleteFileModal}
-                  onShare={handleCreateShareLink}
+                  onShare={openShareModal}
                 />
               ))}
             </div>
@@ -737,6 +765,79 @@ function MyFilesPage() {
         onConfirm={handleConfirmDelete}
         isSubmitting={isDeleting}
       />
+      <Modal
+        isOpen={isShareModalOpen}
+        title="Create share link"
+        description={
+          fileToShare
+            ? `Create a public share link for "${fileToShare.original_name}".`
+            : "Create a public share link."
+        }
+        confirmText={createdShareUrl ? "Done" : "Create link"}
+        onClose={closeShareModal}
+        onConfirm={createdShareUrl ? closeShareModal : handleCreateShareLink}
+        isSubmitting={isCreatingShareLink}
+      >
+        {!createdShareUrl ? (
+          <div className="space-y-4">
+            <Input
+              label="Optional password"
+              type="password"
+              value={sharePassword}
+              onChange={(event) => {
+                setSharePassword(event.target.value);
+                setShareError("");
+              }}
+              placeholder="Leave empty for no password"
+            />
+
+            <Input
+              label="Optional expiration"
+              value={shareExpiration}
+              onChange={(event) => {
+                setShareExpiration(event.target.value);
+                setShareError("");
+              }}
+              placeholder="YYYY-MM-DD HH:MM"
+            />
+
+            <p className="text-xs leading-5 text-slate-500">
+              Example expiration: 2027-01-01 18:30. Leave empty if the link
+              should not expire.
+            </p>
+
+            {shareError && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {shareError}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              Share link created. The link was copied to your clipboard if your
+              browser allowed it.
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-slate-700">Public URL</p>
+              <div className="mt-2 break-all rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                {createdShareUrl}
+              </div>
+            </div>
+
+            <Button variant="secondary" onClick={handleCopyCreatedShareUrl}>
+              Copy link again
+            </Button>
+
+            {shareError && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {shareError}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
