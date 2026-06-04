@@ -34,3 +34,13 @@ export async function downloadPublicSharedFile(token) {
 
   return response.data;
 }
+
+export async function verifyPublicSharePassword(token, password) {
+  const response = await apiClient.post(
+    `share-links/public/${token}/verify-password`,
+    {
+      password,
+    },
+  );
+  return response.data;
+}

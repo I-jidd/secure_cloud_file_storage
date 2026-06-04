@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { Download, FileText, ShieldAlert } from "lucide-react";
 import { useParams } from "react-router-dom";
 
 import {
   downloadPublicSharedFile,
   getPublicShareMetadata,
+  verifyPublicSharePassword,
 } from "../api/shareLinkApi";
 import { formatBytes } from "../utils/formatBytes";
 
@@ -15,6 +16,9 @@ function PublicSharePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [password, setPassword] = useState("");
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
+  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
 
   useEffect(() => {
     async function loadSharedFile() {
@@ -69,6 +73,36 @@ function PublicSharePage() {
     }
   }
 
+  async function handleVerifyPassword(event) {
+    event.preventDefault();
+
+    if (!password.trim()) {
+      setErrorMessage("Password is required.");
+      return;
+    }
+
+    try {
+      setIsVerifyingPassword(true);
+      setErrorMessage("");
+
+      const data = await verifyPublicSharePassword(token, password.trim());
+
+      setSharedFile(data);
+      setIsPasswordVerified(true);
+      setPassword("");
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Invalid or failed password verification.");
+      }
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#f6f4ef] px-6 text-slate-950">
@@ -118,6 +152,34 @@ function PublicSharePage() {
               : "No expiration"}
           </p>
         </div>
+        {sharedFile.requires_password && !isPasswordVerified && (
+          <form
+            onSubmit={handleVerifyPassword}
+            className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+          >
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">
+                Share password
+              </span>
+
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Enter password"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={isVerifyingPassword}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {isVerifyingPassword ? "Verifying..." : "Verify password"}
+            </button>
+          </form>
+        )}
 
         {errorMessage && (
           <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -128,22 +190,24 @@ function PublicSharePage() {
         <button
           type="button"
           onClick={handleDownload}
-          disabled={isDownloading || sharedFile.requires_password}
+          disabled={
+            isDownloading ||
+            (sharedFile.requires_password && !isPasswordVerified)
+          }
           className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
           <Download size={17} />
-          {sharedFile.requires_password
+          {sharedFile.requires_password && !isPasswordVerified
             ? "Password required"
             : isDownloading
               ? "Downloading..."
               : "Download file"}
         </button>
 
-        {sharedFile.requires_password && (
-          <p className="mt-3 text-center text-xs text-slate-500">
-            Password-protected public download will be connected in the next
-            step.
-          </p>
+        {sharedFile.requires_password && isPasswordVerified && (
+          <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            Password verified. You can now download the file.
+          </div>
         )}
       </section>
     </main>
