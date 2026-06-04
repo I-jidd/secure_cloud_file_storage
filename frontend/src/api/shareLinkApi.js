@@ -44,3 +44,17 @@ export async function verifyPublicSharePassword(token, password) {
   );
   return response.data;
 }
+
+export async function downloadPublicSharedFileWithPassword(token, password) {
+  const response = await apiClient.post(
+    `/share-links/public/${token}/download-with-password`,
+    {
+      password,
+    },
+    {
+      responseType: "blob",
+    },
+  );
+
+  return response.data;
+}

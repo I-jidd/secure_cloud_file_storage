@@ -6,6 +6,7 @@ import {
   downloadPublicSharedFile,
   getPublicShareMetadata,
   verifyPublicSharePassword,
+  downloadPublicSharedFileWithPassword,
 } from "../api/shareLinkApi";
 import { formatBytes } from "../utils/formatBytes";
 
@@ -19,6 +20,7 @@ function PublicSharePage() {
   const [password, setPassword] = useState("");
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   const [isPasswordVerified, setIsPasswordVerified] = useState(false);
+  const [verifiedPassword, setVerifiedPassword] = useState("");
 
   useEffect(() => {
     async function loadSharedFile() {
@@ -49,7 +51,10 @@ function PublicSharePage() {
       setIsDownloading(true);
       setErrorMessage("");
 
-      const blob = await downloadPublicSharedFile(token);
+      const blob =
+        sharedFile.requires_password && isPasswordVerified
+          ? await downloadPublicSharedFileWithPassword(token, verifiedPassword)
+          : await downloadPublicSharedFile(token);
       const downloadUrl = window.URL.createObjectURL(blob);
 
       const link = document.createElement("a");
@@ -89,6 +94,7 @@ function PublicSharePage() {
 
       setSharedFile(data);
       setIsPasswordVerified(true);
+      setVerifiedPassword(password.trim());
       setPassword("");
     } catch (error) {
       const detail = error.response?.data?.detail;
