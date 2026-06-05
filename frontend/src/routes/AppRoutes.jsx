@@ -10,11 +10,12 @@ import RegisterPage from "../pages/RegisterPage";
 import SharedLinksPage from "../pages/SharedLinksPage";
 import TrashPage from "../pages/TrashPage";
 import ProtectedRoute from "./ProtectedRoute";
+import LandingPage from "../pages/LandingPage";
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<LandingPage />} />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
