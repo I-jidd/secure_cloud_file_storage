@@ -64,10 +64,6 @@ function TrashPage() {
 
       await loadTrash();
     } catch (error) {
-      console.log("RESTORE FOLDER ERROR STATUS:", error.response?.status);
-      console.log("RESTORE FOLDER ERROR DATA:", error.response?.data);
-      console.log("RESTORE FOLDER ERROR MESSAGE:", error.message);
-
       const detail = error.response?.data?.detail;
 
       if (typeof detail === "string") {
