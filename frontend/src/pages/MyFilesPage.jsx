@@ -8,6 +8,7 @@ import {
   Trash2,
   Upload,
   Link2,
+  ExternalLink,
 } from "lucide-react";
 import Button from "../components/Button";
 import Input from "../components/Input";
@@ -18,6 +19,7 @@ import {
   downloadFile,
   deleteFile,
   renameFile,
+  openFile,
 } from "../api/fileApi";
 import {
   getFolders,
@@ -425,6 +427,29 @@ function MyFilesPage() {
     }
   }
 
+  async function handleOpenFile(file) {
+    try {
+      setErrorMessage("");
+
+      const blob = await openFile(file.id);
+      const fileUrl = window.URL.createObjectURL(blob);
+
+      window.open(fileUrl, "_blank", "noopener, noreferrer");
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(fileUrl);
+      }, 1000 * 60);
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Failed to open file.");
+      }
+    }
+  }
+
   function openCreateFolderModal() {
     setNewFolderName("");
     setNewFolderNameError("");
@@ -725,6 +750,7 @@ function MyFilesPage() {
                 <FileRow
                   key={file.id}
                   file={file}
+                  onOpen={handleOpenFile}
                   onRename={openRenameFileModal}
                   onDownload={handleDownloadFile}
                   onDelete={openDeleteFileModal}
@@ -950,7 +976,7 @@ function FolderCard({ folder, onOpen, onDelete, onRename }) {
   );
 }
 
-function FileRow({ file, onRename, onDownload, onDelete, onShare }) {
+function FileRow({ file, onOpen, onRename, onDownload, onDelete, onShare }) {
   return (
     <div className="flex items-center gap-4 py-4">
       <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-600">
@@ -969,6 +995,14 @@ function FileRow({ file, onRename, onDownload, onDelete, onShare }) {
       </span>
 
       <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onOpen(file)}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+        >
+          <ExternalLink size={16} />
+          Open
+        </button>
         <button
           type="button"
           onClick={() => onRename(file)}

@@ -59,3 +59,11 @@ export async function renameFile(fileId, originalName) {
   });
   return response.data;
 }
+
+export async function openFile(fileId) {
+  const response = await apiClient.get(`/files/${fileId}/download`, {
+    responseType: "blob",
+  });
+
+  return response.data;
+}
