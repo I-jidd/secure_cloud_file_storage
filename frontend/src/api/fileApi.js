@@ -12,7 +12,7 @@ export async function getFiles(folderId = null) {
   return response.data;
 }
 
-export async function uploadFile({ file, folderId = null }) {
+export async function uploadFile(file, folderId = null) {
   const formData = new FormData();
 
   formData.append("upload_file", file);
@@ -21,11 +21,7 @@ export async function uploadFile({ file, folderId = null }) {
     formData.append("folder_id", folderId);
   }
 
-  const response = await apiClient.post("/files/upload", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await apiClient.post("/files/upload", formData);
 
   return response.data;
 }

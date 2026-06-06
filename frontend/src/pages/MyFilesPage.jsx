@@ -237,24 +237,24 @@ function MyFilesPage() {
     }
 
     try {
-      setIsRenamingFile(true);
+      setIsUploading(true);
       setErrorMessage("");
-      setRenameFileNameError("");
 
-      await renameFile(fileToRename.id, trimmedName);
+      await uploadFile(selectedFile, currentFolder?.id || null);
 
-      closeRenameFileModal();
+      event.target.value = "";
+
       await loadMyFiles();
     } catch (error) {
       const detail = error.response?.data?.detail;
 
       if (typeof detail === "string") {
-        setRenameFileNameError(detail);
+        setErrorMessage(detail);
       } else {
-        setRenameFileNameError("Failed to rename file.");
+        setErrorMessage("Failed to upload file.");
       }
     } finally {
-      setIsRenamingFile(false);
+      setIsUploading(false);
     }
   }
 
