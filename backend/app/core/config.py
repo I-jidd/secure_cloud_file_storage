@@ -17,6 +17,7 @@ class Settings(BaseSettings):
         "application/pdf,image/png,image/jpeg,text/plain,"
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
+    FRONTEND_ORIGIN: str
     class Config:
         env_file = ".env"
         
